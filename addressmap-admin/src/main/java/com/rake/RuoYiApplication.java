@@ -15,6 +15,6 @@ public class RuoYiApplication
     public static void main(String[] args)
     {
         SpringApplication.run(RuoYiApplication.class, args);
-        System.out.println("//////////////---MapAddress Start1 Success---////////////// \n");
+        System.out.println("//////////////---MapAddress1 Start1 Success---////////////// \n");
     }
 }
