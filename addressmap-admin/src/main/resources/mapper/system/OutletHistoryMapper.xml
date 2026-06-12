@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.rake.system.mapper.OutletHistoryMapper">
+
+    <resultMap type="OutletHistory" id="OutletHistoryResult">
+        <result property="historyId"    column="history_id"    />
+        <result property="outletId"    column="outlet_id"    />
+        <result property="createdBy"    column="created_by"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedBy"    column="updated_by"    />
+        <result property="updatedAt"    column="updated_at"    />
+        <result property="remark"    column="remark"    />
+        <result property="agent"    column="agent"    />
+    </resultMap>
+
+    <sql id="selectOutletHistoryVo">
+        select history_id, outlet_id, created_by, created_at, updated_by, updated_at, remark, agent from tab_outlet_history
+    </sql>
+
+    <select id="selectOutletHistoryList" parameterType="OutletHistory" resultMap="OutletHistoryResult">
+        <include refid="selectOutletHistoryVo"/>
+        <where>
+            <if test="outletId != null  and outletId != ''"> and outlet_id = #{outletId}</if>
+            <if test="createdBy != null  and createdBy != ''"> and created_by = #{createdBy}</if>
+            <if test="createdAt != null "> and created_at = #{createdAt}</if>
+            <if test="updatedBy != null  and updatedBy != ''"> and updated_by = #{updatedBy}</if>
+            <if test="updatedAt != null "> and updated_at = #{updatedAt}</if>
+            <if test="agent != null  and agent != ''"> and agent = #{agent}</if>
+        </where>
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="selectOutletHistoryByHistoryId" parameterType="String" resultMap="OutletHistoryResult">
+        <include refid="selectOutletHistoryVo"/>
+        where history_id = #{historyId}
+    </select>
+
+    <insert id="insertOutletHistory" parameterType="OutletHistory" useGeneratedKeys="true" keyProperty="historyId">
+        insert into tab_outlet_history
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="outletId != null and outletId != ''">outlet_id,</if>
+            <if test="createdBy != null and createdBy != ''">created_by,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedBy != null">updated_by,</if>
+            <if test="updatedAt != null">updated_at,</if>
+            <if test="remark != null">remark,</if>
+            <if test="agent != null">agent,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="outletId != null and outletId != ''">#{outletId},</if>
+            <if test="createdBy != null and createdBy != ''">#{createdBy},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedBy != null">#{updatedBy},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="agent != null">#{agent},</if>
+         </trim>
+    </insert>
+
+    <update id="updateOutletHistory" parameterType="OutletHistory">
+        update tab_outlet_history
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="outletId != null and outletId != ''">outlet_id = #{outletId},</if>
+            <if test="createdBy != null and createdBy != ''">created_by = #{createdBy},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedBy != null">updated_by = #{updatedBy},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="agent != null">agent = #{agent},</if>
+        </trim>
+        where history_id = #{historyId}
+    </update>
+
+    <delete id="deleteOutletHistoryByHistoryId" parameterType="String">
+        delete from tab_outlet_history where history_id = #{historyId}
+    </delete>
+
+    <delete id="deleteOutletHistoryByHistoryIds" parameterType="String">
+        delete from tab_outlet_history where history_id in
+        <foreach item="historyId" collection="array" open="(" separator="," close=")">
+            #{historyId}
+        </foreach>
+    </delete>
+</mapper>

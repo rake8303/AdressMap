@@ -1,11 +1,17 @@
 package com.rake.common.core.domain.model;
 
 import com.alibaba.fastjson2.annotation.JSONField;
+import com.rake.common.core.domain.entity.SysRole;
 import com.rake.common.core.domain.entity.SysUser;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 /**
  * 登录用户身份权限
@@ -70,6 +76,10 @@ public class LoginUser implements UserDetails
      * 用户信息
      */
     private SysUser user;
+
+
+
+    private List<SysRole> roles;
 
     public LoginUser()
     {
@@ -263,4 +273,27 @@ public class LoginUser implements UserDetails
     {
         return null;
     }
+    public List<SysRole> getRoles() {
+        if (user != null) {
+            return user.getRoles();
+        }
+        return new ArrayList<>();
+    }
+
+    /**
+     * 获取用户角色名称列表
+     *
+     * @return 角色名称列表
+     */
+    public List<String> getRoleNames() {
+        if (user != null && user.getRoles() != null) {
+            return user.getRoles().stream()
+                    .map(SysRole::getRoleName)
+                    .collect(Collectors.toList());
+        }
+        return new ArrayList<>();
+    }
+
+
 }
+

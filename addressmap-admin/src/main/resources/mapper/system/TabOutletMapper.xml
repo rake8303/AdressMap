@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.rake.system.mapper.TabOutletMapper">
+
+    <resultMap type="TabOutlet" id="TabOutletResult">
+        <result property="id"    column="id"    />
+        <result property="jpCompanyName"    column="jp_company_name"    />
+        <result property="shortCompanyName"    column="short_company_name"    />
+        <result property="region"    column="region"    />
+        <result property="headquartersAddress"    column="headquarters_address"    />
+        <result property="contactPerson"    column="contact_person"    />
+        <result property="totalSalesAvg"    column="total_sales_avg"    />
+        <result property="breakthroughStatus"    column="breakthrough_status"    />
+        <result property="hwSalesAvg"    column="hw_sales_avg"    />
+        <result property="estimatedIncrease"    column="estimated_increase"    />
+        <result property="salesPlan"    column="sales_plan"    />
+        <result property="remarks"    column="remarks"    />
+        <result property="installerEventParticipation"    column="installer_event_participation"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+        <result property="abbreviation"    column="abbreviation"    />
+        <result property="cpnType"    column="cpn_type"    />
+        <result property="outletRemark"    column="outlet_remark"    />
+        <result property="salesRecord"    column="sales_record"    />
+        <result property="lat"    column="lat"    />
+        <result property="lng"    column="lng"    />
+    </resultMap>
+
+    <resultMap id="TabOutletOutletHistoryResult" type="TabOutlet" extends="TabOutletResult">
+        <collection property="outletHistoryList" ofType="OutletHistory" column="id" select="selectOutletHistoryList" />
+    </resultMap>
+
+    <resultMap type="OutletHistory" id="OutletHistoryResult">
+        <result property="historyId"    column="history_id"    />
+        <result property="outletId"    column="outlet_id"    />
+        <result property="createdBy"    column="created_by"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedBy"    column="updated_by"    />
+        <result property="updatedAt"    column="updated_at"    />
+        <result property="remark"    column="remark"    />
+        <result property="agent"    column="agent"    />
+    </resultMap>
+
+    <sql id="selectTabOutletVo">
+        select id, jp_company_name, short_company_name, region, headquarters_address, contact_person, total_sales_avg, breakthrough_status, hw_sales_avg, estimated_increase, sales_plan, remarks, installer_event_participation, created_at, updated_at, abbreviation, cpn_type, outlet_remark, sales_record, lat, lng from tab_outlet
+    </sql>
+
+    <select id="selectTabOutletList" parameterType="TabOutlet" resultMap="TabOutletResult">
+        <include refid="selectTabOutletVo"/>
+        <where>
+            <if test="jpCompanyName != null  and jpCompanyName != ''"> and jp_company_name like concat('%', #{jpCompanyName}, '%')</if>
+            <if test="region != null  and region != ''"> and region = #{region}</if>
+            <if test="headquartersAddress != null  and headquartersAddress != ''"> and headquarters_address like concat('%', #{headquartersAddress}, '%')</if>
+        </where>
+    </select>
+
+    <select id="selectTabOutletById" parameterType="String" resultMap="TabOutletOutletHistoryResult">
+        select id, jp_company_name, short_company_name, region, headquarters_address, contact_person, total_sales_avg, breakthrough_status, hw_sales_avg, estimated_increase, sales_plan, remarks, installer_event_participation, created_at, updated_at, abbreviation, cpn_type, outlet_remark, sales_record , lat, lng
+        from tab_outlet
+        where id = #{id}
+    </select>
+
+    <select id="selectOutletHistoryList" resultType="OutletHistory" resultMap="OutletHistoryResult">
+        select history_id, outlet_id, created_by, created_at, updated_by, updated_at, remark, agent
+        from tab_outlet_history
+        where outlet_id = #{outlet_id}
+    </select>
+
+    <insert id="insertTabOutlet" parameterType="TabOutlet" useGeneratedKeys="true" keyProperty="id">
+        insert into tab_outlet
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="jpCompanyName != null and jpCompanyName != ''">jp_company_name,</if>
+            <if test="shortCompanyName != null and shortCompanyName != ''">short_company_name,</if>
+            <if test="region != null and region != ''">region,</if>
+            <if test="headquartersAddress != null and headquartersAddress != ''">headquarters_address,</if>
+            <if test="contactPerson != null">contact_person,</if>
+            <if test="totalSalesAvg != null">total_sales_avg,</if>
+            <if test="breakthroughStatus != null">breakthrough_status,</if>
+            <if test="hwSalesAvg != null">hw_sales_avg,</if>
+            <if test="estimatedIncrease != null">estimated_increase,</if>
+            <if test="salesPlan != null">sales_plan,</if>
+            <if test="remarks != null">remarks,</if>
+            <if test="installerEventParticipation != null">installer_event_participation,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+            <if test="abbreviation != null">abbreviation,</if>
+            <if test="cpnType != null">cpn_type,</if>
+            <if test="outletRemark != null">outlet_remark,</if>
+            <if test="salesRecord != null">sales_record,</if>
+            <if test="lat != null">lat,</if>
+            <if test="lng != null">lng,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="jpCompanyName != null and jpCompanyName != ''">#{jpCompanyName},</if>
+            <if test="shortCompanyName != null and shortCompanyName != ''">#{shortCompanyName},</if>
+            <if test="region != null and region != ''">#{region},</if>
+            <if test="headquartersAddress != null and headquartersAddress != ''">#{headquartersAddress},</if>
+            <if test="contactPerson != null">#{contactPerson},</if>
+            <if test="totalSalesAvg != null">#{totalSalesAvg},</if>
+            <if test="breakthroughStatus != null">#{breakthroughStatus},</if>
+            <if test="hwSalesAvg != null">#{hwSalesAvg},</if>
+            <if test="estimatedIncrease != null">#{estimatedIncrease},</if>
+            <if test="salesPlan != null">#{salesPlan},</if>
+            <if test="remarks != null">#{remarks},</if>
+            <if test="installerEventParticipation != null">#{installerEventParticipation},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+            <if test="abbreviation != null">#{abbreviation},</if>
+            <if test="cpnType != null">#{cpnType},</if>
+            <if test="outletRemark != null">#{outletRemark},</if>
+            <if test="salesRecord != null">#{salesRecord},</if>
+            <if test="lat != null">#{lat},</if>
+            <if test="lng != null">#{lng},</if>
+         </trim>
+    </insert>
+
+    <update id="updateTabOutlet" parameterType="TabOutlet">
+        update tab_outlet
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="jpCompanyName != null and jpCompanyName != ''">jp_company_name = #{jpCompanyName},</if>
+            <if test="shortCompanyName != null and shortCompanyName != ''">short_company_name = #{shortCompanyName},</if>
+            <if test="region != null and region != ''">region = #{region},</if>
+            <if test="headquartersAddress != null and headquartersAddress != ''">headquarters_address = #{headquartersAddress},</if>
+            <if test="contactPerson != null">contact_person = #{contactPerson},</if>
+            <if test="totalSalesAvg != null">total_sales_avg = #{totalSalesAvg},</if>
+            <if test="breakthroughStatus != null">breakthrough_status = #{breakthroughStatus},</if>
+            <if test="hwSalesAvg != null">hw_sales_avg = #{hwSalesAvg},</if>
+            <if test="estimatedIncrease != null">estimated_increase = #{estimatedIncrease},</if>
+            <if test="salesPlan != null">sales_plan = #{salesPlan},</if>
+            <if test="remarks != null">remarks = #{remarks},</if>
+            <if test="installerEventParticipation != null">installer_event_participation = #{installerEventParticipation},</if>
+            <if test="abbreviation != null">abbreviation = #{abbreviation},</if>
+            <if test="cpnType != null">cpn_type = #{cpnType},</if>
+            <if test="outletRemark != null">outlet_remark = #{outletRemark},</if>
+            <if test="salesRecord != null">sales_record = #{salesRecord},</if>
+            <if test="lat != null">lat = #{lat},</if>
+            <if test="lng != null">lng = #{lng},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTabOutletById" parameterType="String">
+        delete from tab_outlet where id = #{id}
+    </delete>
+
+    <delete id="deleteTabOutletByIds" parameterType="String">
+        delete from tab_outlet where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <delete id="deleteOutletHistoryByOutletIds" parameterType="String">
+        delete from tab_outlet_history where outlet_id in
+        <foreach item="outletId" collection="array" open="(" separator="," close=")">
+            #{outletId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteOutletHistoryByOutletId" parameterType="String">
+        delete from tab_outlet_history where outlet_id = #{outletId}
+    </delete>
+
+    <select id="selectOutletAgentNames" parameterType="String" resultType="String">
+        select agent_name
+        from tab_outlet_agent
+        where outlet_id = #{outletId}
+        order by agent_name
+    </select>
+
+    <delete id="deleteOutletAgentsByOutletId" parameterType="String">
+        delete from tab_outlet_agent where outlet_id = #{outletId}
+    </delete>
+
+    <delete id="deleteOutletAgentsByOutletIds" parameterType="String">
+        delete from tab_outlet_agent where outlet_id in
+        <foreach item="outletId" collection="array" open="(" separator="," close=")">
+            #{outletId}
+        </foreach>
+    </delete>
+
+    <insert id="batchOutletAgents">
+        insert into tab_outlet_agent(outlet_id, agent_name) values
+        <foreach item="agentName" collection="agentNames" separator=",">
+            (#{outletId}, #{agentName})
+        </foreach>
+    </insert>
+
+    <insert id="batchOutletHistory">
+        insert into tab_outlet_history( history_id, outlet_id, created_by, created_at, updated_by, updated_at, remark, agent) values
+        <foreach item="item" index="index" collection="list" separator=",">
+            ( #{item.historyId}, #{item.outletId}, #{item.createdBy}, #{item.createdAt}, #{item.updatedBy}, #{item.updatedAt}, #{item.remark}, #{item.agent})
+        </foreach>
+    </insert>
+
+
+    <select id="selectTabOutletByBusinessFlow" resultMap="TabOutletResult">
+        SELECT DISTINCT
+            o.id,
+            o.jp_company_name,
+            o.short_company_name,
+            o.region,
+            o.headquarters_address,
+            o.contact_person,
+            o.total_sales_avg,
+            o.breakthrough_status,
+            o.hw_sales_avg,
+            o.estimated_increase,
+            o.sales_plan,
+            o.remarks,
+            o.installer_event_participation,
+            o.created_at,
+            o.updated_at,
+            o.abbreviation,
+            o.cpn_type,
+            o.outlet_remark,
+            o.sales_record,
+            o.lat,
+            o.lng
+        FROM tab_outlet o
+        INNER JOIN tab_outlet_agent oa ON oa.outlet_id = o.id
+        WHERE oa.agent_name IN
+        <foreach item="agentName" collection="agentNames" open="(" separator="," close=")">
+            #{agentName}
+        </foreach>
+        ORDER BY o.id
+    </select>
+
+</mapper>
