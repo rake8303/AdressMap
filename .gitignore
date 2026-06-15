@@ -1,17 +1,64 @@
-.idea/
+######################################################################
+# Build Tools
+
+.gradle
+/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+target/
+!.mvn/wrapper/maven-wrapper.jar
+AddressMap/**/target/
+
+######################################################################
+# IDE
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### JRebel ###
+rebel.xml
+
+### NetBeans ###
+nbproject/private/
+build/*
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+######################################################################
+# Others
 *.log
 *.tmp
 *.bak
+*.xml.versionsBackup
+*.swp
+*.png
 
+!*/build/*.java
+!*/build/*.html
+!*/build/*.xml
+
+######################################################################
 # Local runtime artifacts
+
 Redis/Logs/
 Redis/dump.rdb
 AddressMap/logs/
 
-# Generated screenshots and verification images
-*.png
+######################################################################
+# Frontend dependencies/build outputs
 
-# Nested project dependencies/build outputs
 RuoYi-Vue3/node_modules/
 RuoYi-Vue3/dist/
-AddressMap/**/target/

@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="com.rake.outletagentunion.mapper.OutletAgentUnionMapper">
+    <!-- 字段和实体类属性一一对应 -->
+    <resultMap id="OutletAgentUnionMap" type="com.rake.outletagentunion.domain.OutletAgentUnion">
+        <id     property="id"                          column="id"/>
+        <result property="jpCompanyName"               column="jp_company_name"/>
+        <result property="shortCompanyName"            column="short_company_name"/>
+        <result property="abbreviation"                column="abbreviation"/>
+        <result property="region"                      column="region"/>
+        <result property="headquartersAddress"         column="headquarters_address"/>
+        <result property="contactPerson"               column="contact_person"/>
+        <result property="totalSalesAvg"               column="total_sales_avg"/>
+        <result property="breakthroughStatus"          column="breakthrough_status"/>
+        <result property="hwSalesAvg"                  column="hw_sales_avg"/>
+        <result property="estimatedIncrease"           column="estimated_increase"/>
+        <result property="salesPlan"                   column="sales_plan"/>
+        <result property="remarks"                     column="remarks"/>
+        <result property="installerEventParticipation" column="installer_event_participation"/>
+        <result property="branchName"                  column="branch_name"/>
+        <result property="companyType"                  column="company_type"/>
+        <result property="businessflow"                 column="businessflow"/>
+        <result property="cpnType"                 column="cpn_type"/>
+        <result property="salesRecord"                 column="sales_record"/>
+        <result property="lat"                 column="lat"/>
+        <result property="lng"                 column="lng"/>
+    </resultMap>
+
+    <select id="selectOutletAgentUnionList" resultMap="OutletAgentUnionMap">
+        SELECT
+            v.id,
+            v.jp_company_name,
+            v.short_company_name,
+            v.abbreviation,
+            v.region,
+            v.headquarters_address,
+            v.contact_person,
+            v.total_sales_avg,
+            v.breakthrough_status,
+            v.hw_sales_avg,
+            v.estimated_increase,
+            v.sales_plan,
+            v.remarks,
+            v.installer_event_participation,
+            v.branch_name,
+            v.company_type,
+            (
+                SELECT GROUP_CONCAT(oa.agent_name ORDER BY FIELD(oa.agent_name, 'XSOL', 'DMM', 'WWB', '高島', '韓華') SEPARATOR ',')
+                FROM addressmap.tab_outlet_agent oa
+                WHERE oa.outlet_id = v.id
+            ) AS businessflow,
+            v.cpn_type,
+            v.sales_record,
+            v.lat,
+            v.lng
+        FROM (
+            SELECT
+                o.id,
+                o.jp_company_name,
+                o.short_company_name,
+                o.abbreviation,
+                o.region,
+                o.headquarters_address,
+                o.contact_person,
+                o.total_sales_avg,
+                o.breakthrough_status,
+                o.hw_sales_avg,
+                o.estimated_increase,
+                o.sales_plan,
+                o.remarks,
+                o.installer_event_participation,
+                NULL AS branch_name,
+                '販売店' AS company_type,
+                o.cpn_type,
+                o.sales_record,
+                o.lat,
+                o.lng
+            FROM addressmap.tab_outlet o
+        ) v
+        ORDER BY v.id
+    </select>
+
+    <select id="selectOutletAgentUnionListByBusinessflow" resultMap="OutletAgentUnionMap">
+        SELECT DISTINCT
+            v.id,
+            v.jp_company_name,
+            v.short_company_name,
+            v.abbreviation,
+            v.region,
+            v.headquarters_address,
+            v.contact_person,
+            v.total_sales_avg,
+            v.breakthrough_status,
+            v.hw_sales_avg,
+            v.estimated_increase,
+            v.sales_plan,
+            v.remarks,
+            v.installer_event_participation,
+            v.branch_name,
+            v.company_type,
+            (
+                SELECT GROUP_CONCAT(oa2.agent_name ORDER BY FIELD(oa2.agent_name, 'XSOL', 'DMM', 'WWB', '高島', '韓華') SEPARATOR ',')
+                FROM addressmap.tab_outlet_agent oa2
+                WHERE oa2.outlet_id = v.id
+            ) AS businessflow,
+            v.cpn_type,
+            v.sales_record,
+            v.lat,
+            v.lng
+        FROM (
+            SELECT
+                o.id,
+                o.jp_company_name,
+                o.short_company_name,
+                o.abbreviation,
+                o.region,
+                o.headquarters_address,
+                o.contact_person,
+                o.total_sales_avg,
+                o.breakthrough_status,
+                o.hw_sales_avg,
+                o.estimated_increase,
+                o.sales_plan,
+                o.remarks,
+                o.installer_event_participation,
+                NULL AS branch_name,
+                '販売店' AS company_type,
+                o.cpn_type,
+                o.sales_record,
+                o.lat,
+                o.lng
+            FROM addressmap.tab_outlet o
+        ) v
+        INNER JOIN addressmap.tab_outlet_agent oa ON oa.outlet_id = v.id
+        WHERE oa.agent_name IN
+        <foreach item="businessflow" collection="businessflows" open="(" separator="," close=")">
+            #{businessflow}
+        </foreach>
+        ORDER BY v.id
+    </select>
+</mapper>
