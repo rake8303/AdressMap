@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.rake.system.mapper.OutletMonthlySalesMapper">
+
+    <resultMap type="OutletMonthlySales" id="OutletMonthlySalesResult">
+        <result property="salesId" column="sales_id" />
+        <result property="outletId" column="outlet_id" />
+        <result property="salesMonth" column="sales_month" />
+        <result property="quantity" column="quantity" />
+        <result property="productName" column="product_name" />
+        <result property="remark" column="remark" />
+        <result property="updatedBy" column="updated_by" />
+        <result property="updatedAt" column="updated_at" />
+    </resultMap>
+
+    <sql id="selectOutletMonthlySalesVo">
+        select sales_id, outlet_id, sales_month, quantity, product_name, remark, updated_by, updated_at
+        from tab_outlet_monthly_sales
+    </sql>
+
+    <select id="selectOutletMonthlySalesList" parameterType="OutletMonthlySales" resultMap="OutletMonthlySalesResult">
+        <include refid="selectOutletMonthlySalesVo"/>
+        <where>
+            <if test="outletId != null and outletId != ''"> and outlet_id = #{outletId}</if>
+            <if test="salesMonth != null and salesMonth != ''"> and sales_month = #{salesMonth}</if>
+            <if test="productName != null and productName != ''"> and product_name like concat('%', #{productName}, '%')</if>
+        </where>
+        order by sales_month desc, sales_id desc
+    </select>
+
+    <select id="selectOutletMonthlySalesBySalesId" parameterType="Long" resultMap="OutletMonthlySalesResult">
+        <include refid="selectOutletMonthlySalesVo"/>
+        where sales_id = #{salesId}
+    </select>
+
+    <insert id="insertOutletMonthlySales" parameterType="OutletMonthlySales" useGeneratedKeys="true" keyProperty="salesId">
+        insert into tab_outlet_monthly_sales
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="outletId != null and outletId != ''">outlet_id,</if>
+            <if test="salesMonth != null and salesMonth != ''">sales_month,</if>
+            <if test="quantity != null">quantity,</if>
+            <if test="productName != null">product_name,</if>
+            <if test="remark != null">remark,</if>
+            <if test="updatedBy != null">updated_by,</if>
+            <if test="updatedAt != null">updated_at,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="outletId != null and outletId != ''">#{outletId},</if>
+            <if test="salesMonth != null and salesMonth != ''">#{salesMonth},</if>
+            <if test="quantity != null">#{quantity},</if>
+            <if test="productName != null">#{productName},</if>
+            <if test="remark != null">#{remark},</if>
+            <if test="updatedBy != null">#{updatedBy},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+        </trim>
+    </insert>
+
+    <update id="updateOutletMonthlySales" parameterType="OutletMonthlySales">
+        update tab_outlet_monthly_sales
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="outletId != null and outletId != ''">outlet_id = #{outletId},</if>
+            <if test="salesMonth != null and salesMonth != ''">sales_month = #{salesMonth},</if>
+            <if test="quantity != null">quantity = #{quantity},</if>
+            <if test="productName != null">product_name = #{productName},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updatedBy != null">updated_by = #{updatedBy},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+        </trim>
+        where sales_id = #{salesId}
+    </update>
+
+    <delete id="deleteOutletMonthlySalesBySalesId" parameterType="Long">
+        delete from tab_outlet_monthly_sales where sales_id = #{salesId}
+    </delete>
+
+    <delete id="deleteOutletMonthlySalesBySalesIds" parameterType="Long">
+        delete from tab_outlet_monthly_sales where sales_id in
+        <foreach item="salesId" collection="array" open="(" separator="," close=")">
+            #{salesId}
+        </foreach>
+    </delete>
+</mapper>

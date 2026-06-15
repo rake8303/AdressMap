@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.rake.system.mapper.AgentMapper">
+    
+    <resultMap type="Agent" id="AgentResult">
+        <result property="id"    column="id"    />
+        <result property="hqName"    column="hq_name"    />
+        <result property="branchName"    column="branch_name"    />
+        <result property="address"    column="address"    />
+        <result property="region"    column="region"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+        <result property="abbreviation"    column="abbreviation"    />
+        <result property="lat"    column="lat"    />
+        <result property="lng"    column="lng"    />
+    </resultMap>
+
+    <sql id="selectAgentVo">
+        select id, hq_name, branch_name, address, region, created_at, updated_at, abbreviation,lat,lng from tab_agent
+    </sql>
+
+    <select id="selectAgentList" parameterType="Agent" resultMap="AgentResult">
+        <include refid="selectAgentVo"/>
+        <where>  
+            <if test="hqName != null  and hqName != ''"> and hq_name like concat('%', #{hqName}, '%')</if>
+            <if test="branchName != null  and branchName != ''"> and branch_name like concat('%', #{branchName}, '%')</if>
+            <if test="address != null  and address != ''"> and address = #{address}</if>
+            <if test="region != null  and region != ''"> and region = #{region}</if>
+            <if test="abbreviation != null  and abbreviation != ''"> and abbreviation = #{abbreviation}</if>
+            <if test="lat != null  and lat != ''"> and lat = #{lat}</if>
+            <if test="lng != null  and lng != ''"> and lng = #{lng}</if>
+        </where>
+    </select>
+    
+    <select id="selectAgentById" parameterType="String" resultMap="AgentResult">
+        <include refid="selectAgentVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertAgent" parameterType="Agent" useGeneratedKeys="true" keyProperty="id">
+        insert into tab_agent
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="hqName != null and hqName != ''">hq_name,</if>
+            <if test="branchName != null and branchName != ''">branch_name,</if>
+            <if test="address != null and address != ''">address,</if>
+            <if test="region != null and region != ''">region,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+            <if test="abbreviation != null and abbreviation != ''">abbreviation,</if>
+            <if test="lat != null and lat != ''">lat,</if>
+            <if test="lng != null and lng != ''">lng,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="hqName != null and hqName != ''">#{hqName},</if>
+            <if test="branchName != null and branchName != ''">#{branchName},</if>
+            <if test="address != null and address != ''">#{address},</if>
+            <if test="region != null and region != ''">#{region},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+            <if test="abbreviation != null and abbreviation != ''">#{abbreviation},</if>
+            <if test="lat != null and lat != ''">#{lat},</if>
+            <if test="lng != null and lng != ''">#{lng},</if>
+         </trim>
+    </insert>
+
+    <update id="updateAgent" parameterType="Agent">
+        update tab_agent
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="hqName != null and hqName != ''">hq_name = #{hqName},</if>
+            <if test="branchName != null and branchName != ''">branch_name = #{branchName},</if>
+            <if test="address != null and address != ''">address = #{address},</if>
+            <if test="region != null and region != ''">region = #{region},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+            <if test="abbreviation != null and abbreviation != ''">abbreviation = #{abbreviation},</if>
+            <if test="lat != null and lat != ''">lat = #{lat},</if>
+            <if test="lng != null and lng != ''">lng = #{lng},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteAgentById" parameterType="String">
+        delete from tab_agent where id = #{id}
+    </delete>
+
+    <delete id="deleteAgentByIds" parameterType="String">
+        delete from tab_agent where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

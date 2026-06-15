@@ -1,0 +1,17 @@
+.idea/
+*.log
+*.tmp
+*.bak
+
+# Local runtime artifacts
+Redis/Logs/
+Redis/dump.rdb
+AddressMap/logs/
+
+# Generated screenshots and verification images
+*.png
+
+# Nested project dependencies/build outputs
+RuoYi-Vue3/node_modules/
+RuoYi-Vue3/dist/
+AddressMap/**/target/

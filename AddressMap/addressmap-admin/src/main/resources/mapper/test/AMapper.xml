@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.rake.test.mapper.AMapper">
+    
+    <resultMap type="A" id="AResult">
+        <result property="id"    column="id"    />
+        <result property="name"    column="name"    />
+        <result property="value"    column="value"    />
+    </resultMap>
+
+    <sql id="selectAVo">
+        select id, name, value from a
+    </sql>
+
+    <select id="selectAList" parameterType="A" resultMap="AResult">
+        <include refid="selectAVo"/>
+        <where>  
+            <if test="name != null  and name != ''"> and name like concat('%', #{name}, '%')</if>
+            <if test="value != null  and value != ''"> and value = #{value}</if>
+        </where>
+    </select>
+    
+    <select id="selectAById" parameterType="Long" resultMap="AResult">
+        <include refid="selectAVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertA" parameterType="A" useGeneratedKeys="true" keyProperty="id">
+        insert into a
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="name != null and name != ''">name,</if>
+            <if test="value != null and value != ''">value,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="name != null and name != ''">#{name},</if>
+            <if test="value != null and value != ''">#{value},</if>
+         </trim>
+    </insert>
+
+    <update id="updateA" parameterType="A">
+        update a
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="name != null and name != ''">name = #{name},</if>
+            <if test="value != null and value != ''">value = #{value},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteAById" parameterType="Long">
+        delete from a where id = #{id}
+    </delete>
+
+    <delete id="deleteAByIds" parameterType="String">
+        delete from a where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+</mapper>

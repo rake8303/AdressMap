@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.rake.outletagentunion.mapper.OutletAgentUnionMapper">
+    <resultMap id="OutletAgentUnionMap" type="com.rake.outletagentunion.domain.OutletAgentUnion">
+        <id property="id" column="id"/>
+        <result property="jpCompanyName" column="jp_company_name"/>
+        <result property="shortCompanyName" column="short_company_name"/>
+        <result property="abbreviation" column="abbreviation"/>
+        <result property="region" column="region"/>
+        <result property="headquartersAddress" column="headquarters_address"/>
+        <result property="contactPerson" column="contact_person"/>
+        <result property="totalSalesAvg" column="total_sales_avg"/>
+        <result property="breakthroughStatus" column="breakthrough_status"/>
+        <result property="hwSalesAvg" column="hw_sales_avg"/>
+        <result property="estimatedIncrease" column="estimated_increase"/>
+        <result property="salesPlan" column="sales_plan"/>
+        <result property="remarks" column="remarks"/>
+        <result property="installerEventParticipation" column="installer_event_participation"/>
+        <result property="branchName" column="branch_name"/>
+        <result property="companyType" column="company_type"/>
+        <result property="businessflow" column="businessflow"/>
+        <result property="cpnType" column="cpn_type"/>
+        <result property="salesRecord" column="sales_record"/>
+        <result property="lat" column="lat"/>
+        <result property="lng" column="lng"/>
+    </resultMap>
+
+    <sql id="BusinessFlowOrder">
+        FIELD(oa.agent_name, '織田家', '豊臣家', '徳川家', '武田家', '上杉家'), oa.agent_name
+    </sql>
+
+    <sql id="OutletColumns">
+        o.id,
+        o.jp_company_name,
+        o.short_company_name,
+        o.abbreviation,
+        o.region,
+        o.headquarters_address,
+        o.contact_person,
+        o.total_sales_avg,
+        o.breakthrough_status,
+        o.hw_sales_avg,
+        o.estimated_increase,
+        o.sales_plan,
+        o.remarks,
+        o.installer_event_participation,
+        NULL AS branch_name,
+        '販売店' AS company_type,
+        (
+            SELECT GROUP_CONCAT(oa.agent_name ORDER BY <include refid="BusinessFlowOrder"/> SEPARATOR ',')
+            FROM tab_outlet_agent oa
+            WHERE oa.outlet_id = o.id
+        ) AS businessflow,
+        o.cpn_type,
+        o.sales_record,
+        o.lat,
+        o.lng
+    </sql>
+
+    <select id="selectOutletAgentUnionList" resultMap="OutletAgentUnionMap">
+        SELECT
+            <include refid="OutletColumns"/>
+        FROM tab_outlet o
+        ORDER BY o.id
+    </select>
+
+    <select id="selectOutletAgentUnionListByBusinessflow" resultMap="OutletAgentUnionMap">
+        SELECT DISTINCT
+            <include refid="OutletColumns"/>
+        FROM tab_outlet o
+        INNER JOIN tab_outlet_agent filter_oa ON filter_oa.outlet_id = o.id
+        WHERE filter_oa.agent_name IN
+        <foreach item="businessflow" collection="businessflows" open="(" separator="," close=")">
+            #{businessflow}
+        </foreach>
+        ORDER BY o.id
+    </select>
+</mapper>
