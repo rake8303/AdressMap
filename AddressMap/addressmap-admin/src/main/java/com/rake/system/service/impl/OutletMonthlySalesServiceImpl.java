@@ -48,6 +48,7 @@ public class OutletMonthlySalesServiceImpl implements IOutletMonthlySalesService
             {
                 return Collections.emptyList();
             }
+            validateRequestedOutletAccess(outletMonthlySales.getOutletId());
             outletMonthlySales.getParams().put("businessFlows", businessFlows);
         }
         return outletMonthlySalesMapper.selectOutletMonthlySalesList(outletMonthlySales);
@@ -56,40 +57,69 @@ public class OutletMonthlySalesServiceImpl implements IOutletMonthlySalesService
     @Override
     public int insertOutletMonthlySales(OutletMonthlySales outletMonthlySales)
     {
-        validateOutletExists(outletMonthlySales);
+        validateWritableMonthlySales(outletMonthlySales);
         return outletMonthlySalesMapper.insertOutletMonthlySales(outletMonthlySales);
     }
 
     @Override
     public int updateOutletMonthlySales(OutletMonthlySales outletMonthlySales)
     {
-        validateOutletExists(outletMonthlySales);
+        validateWritableMonthlySales(outletMonthlySales);
         return outletMonthlySalesMapper.updateOutletMonthlySales(outletMonthlySales);
     }
 
     @Override
     public int deleteOutletMonthlySalesBySalesIds(Long[] salesIds)
     {
+        if (salesIds != null)
+        {
+            for (Long salesId : salesIds)
+            {
+                validateSalesAccess(salesId);
+            }
+        }
         return outletMonthlySalesMapper.deleteOutletMonthlySalesBySalesIds(salesIds);
     }
 
     @Override
     public int deleteOutletMonthlySalesBySalesId(Long salesId)
     {
+        validateSalesAccess(salesId);
         return outletMonthlySalesMapper.deleteOutletMonthlySalesBySalesId(salesId);
+    }
+
+    private void validateWritableMonthlySales(OutletMonthlySales outletMonthlySales)
+    {
+        validateExistingSalesAccess(outletMonthlySales == null ? null : outletMonthlySales.getSalesId());
+        validateOutletExists(outletMonthlySales);
+        validateOutletAccess(outletMonthlySales.getOutletId());
+    }
+
+    private void validateExistingSalesAccess(Long salesId)
+    {
+        if (salesId != null)
+        {
+            validateSalesAccess(salesId);
+        }
     }
 
     private void validateOutletExists(OutletMonthlySales outletMonthlySales)
     {
-        if (outletMonthlySales == null
-                || outletMonthlySales.getOutletId() == null
-                || outletMonthlySales.getOutletId().trim().isEmpty())
+        if (outletMonthlySales == null || StringUtils.isBlank(outletMonthlySales.getOutletId()))
         {
             throw new ServiceException("销售店ID不能为空");
         }
         if (tabOutletMapper.selectTabOutletById(outletMonthlySales.getOutletId().trim()) == null)
         {
             throw new ServiceException("销售店不存在，无法新增月次销售");
+        }
+    }
+
+    private void validateRequestedOutletAccess(String outletId)
+    {
+        if (StringUtils.isNotBlank(outletId))
+        {
+            validateOutletAccess(outletId);
         }
     }
 
@@ -100,7 +130,7 @@ public class OutletMonthlySalesServiceImpl implements IOutletMonthlySalesService
             return;
         }
         List<String> businessFlows = getCurrentBusinessFlows();
-        List<String> outletAgents = tabOutletMapper.selectOutletAgentNames(outletId);
+        List<String> outletAgents = AgentRoleUtil.keepPrimaryBusinessFlow(tabOutletMapper.selectOutletAgentNames(outletId));
         if (businessFlows.isEmpty() || StringUtils.isEmpty(outletAgents) || Collections.disjoint(businessFlows, outletAgents))
         {
             throw new ServiceException(MessageUtils.message("no.view.permission", String.join(",", businessFlows)));
@@ -110,5 +140,14 @@ public class OutletMonthlySalesServiceImpl implements IOutletMonthlySalesService
     private List<String> getCurrentBusinessFlows()
     {
         return AgentRoleUtil.getBusinessFlowNames(SecurityUtils.getAuthentication());
+    }
+
+    private void validateSalesAccess(Long salesId)
+    {
+        OutletMonthlySales outletMonthlySales = outletMonthlySalesMapper.selectOutletMonthlySalesBySalesId(salesId);
+        if (outletMonthlySales != null)
+        {
+            validateOutletAccess(outletMonthlySales.getOutletId());
+        }
     }
 }

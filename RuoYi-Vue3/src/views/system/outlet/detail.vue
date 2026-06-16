@@ -12,7 +12,7 @@
               <span>{{ $t('outlet.basicInfo') }}</span>
               <div class="card-actions">
                 <el-button
-                  v-if="specialPermissions && !isBasicInfoEditing"
+                  v-if="canManageRelatedData && !isBasicInfoEditing"
                   type="primary"
                   plain
                   @click="startEditBasicInfo"
@@ -100,9 +100,7 @@
             <el-col :span="12">
               <el-form-item :label="$t('outlet.agent')" prop="agentList">
                 <el-select
-                  class="agent-multi-select"
-                  v-model="form.agentList"
-                  multiple
+                  v-model="selectedAgent"
                   :placeholder="$t('outlet.placeholderAgent')"
                   style="width: 100%"
                   :disabled="!basicInfoEditable"
@@ -134,10 +132,10 @@
               <span>月次販売台数</span>
               <!-- 权限修改前：这里的新增/删除/编辑按钮未按角色做前端显隐控制。 -->
               <div>
-                <el-button type="primary" icon="Plus" @click="handleAddMonthlySales">
+                <el-button v-if="canManageRelatedData" type="primary" icon="Plus" @click="handleAddMonthlySales">
                   {{ $t('common.add') }}
                 </el-button>
-                <el-button type="danger" icon="Delete" @click="handleDeleteMonthlySales">
+                <el-button v-if="canManageRelatedData" type="danger" icon="Delete" @click="handleDeleteMonthlySales">
                   {{ $t('common.delete') }}
                 </el-button>
               </div>
@@ -159,7 +157,7 @@
             <el-table-column label="最后修改时间" prop="updatedAt" min-width="170" />
             <el-table-column label="操作" width="100" fixed="right">
               <template #default="scope">
-                <el-button link type="primary" @click="handleEditMonthlySales(scope.row)">
+                <el-button v-if="canManageRelatedData" link type="primary" @click="handleEditMonthlySales(scope.row)">
                   修改
                 </el-button>
               </template>
@@ -173,10 +171,10 @@
               <span>{{ $t('outlet.visitHistory') }}</span>
               <!-- 权限修改前：这里的新增/删除按钮未按角色做前端显隐控制。 -->
               <div>
-                <el-button type="primary" icon="Plus" @click="handleAddVisitHistory">
+                <el-button v-if="canManageRelatedData" type="primary" icon="Plus" @click="handleAddVisitHistory">
                   {{ $t('common.add') }}
                 </el-button>
-                <el-button type="danger" icon="Delete" @click="handleDeleteVisitHistory">
+                <el-button v-if="canManageRelatedData" type="danger" icon="Delete" @click="handleDeleteVisitHistory">
                   {{ $t('common.delete') }}
                 </el-button>
               </div>
@@ -219,7 +217,7 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="visitDialogVisible = false">{{ $t('common.cancel') }}</el-button>
-          <el-button type="primary" @click="saveVisitHistory">{{ $t('common.save') }}</el-button>
+          <el-button v-if="canManageRelatedData" type="primary" @click="saveVisitHistory">{{ $t('common.save') }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -265,7 +263,7 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="monthlySalesDialogVisible = false">{{ $t('common.cancel') }}</el-button>
-          <el-button type="primary" @click="saveMonthlySales">{{ $t('common.save') }}</el-button>
+          <el-button v-if="canManageRelatedData" type="primary" @click="saveMonthlySales">{{ $t('common.save') }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -290,6 +288,8 @@ import { t } from "@/i18n";
 import {
   OUTLET_AGENTS,
   applySelectedOutletAgents,
+  getCurrentBusinessFlowRole,
+  getPrimaryBusinessFlow,
   getSelectedOutletAgents,
   canViewAllData,
 } from "@/utils/outletAgents";
@@ -300,6 +300,8 @@ const router = useRouter();
 const { te } = useI18n();
 const userStore = useUserStore();
 const specialPermissions = computed(() => canViewAllData(userStore));
+const currentBusinessFlowRole = computed(() => getCurrentBusinessFlowRole(userStore));
+const canManageRelatedData = computed(() => specialPermissions.value || !!currentBusinessFlowRole.value);
 
 const { proxy } = getCurrentInstance();
 const { region, cpn_type } = proxy.useDict("region", "cpn_type");
@@ -345,10 +347,11 @@ const localizedRegion = computed(() => localizeDictOptions(region.value, "region
 const localizedCpnType = computed(() => localizeDictOptions(cpn_type.value, "companyType"));
 const title = computed(() => t("outlet.detailTitle"));
 const isBasicInfoEditing = ref(false);
-const basicInfoEditable = computed(() => specialPermissions.value && isBasicInfoEditing.value);
+const basicInfoEditable = computed(() => canManageRelatedData.value && isBasicInfoEditing.value);
 
 const form = ref({});
 const formSnapshot = ref(null);
+const selectedAgent = ref("");
 const outletHistoryList = ref([]);
 const checkedOutletHistory = ref([]);
 const monthlySalesList = ref([]);
@@ -446,31 +449,37 @@ function goBack() {
   router.go(-1);
 }
 
-function getDetail() {
+function legacyGetDetail() {
   const id = route.params.id;
-  getOutlet(id).then((response) => {
-    const detail = {
-      ...response.data,
-      agentList: getSelectedOutletAgents(response.data),
-    };
-    form.value = detail;
-    formSnapshot.value = JSON.parse(JSON.stringify(detail));
-    isBasicInfoEditing.value = false;
-  });
+  getOutlet(id)
+    .then((response) => {
+      const detail = {
+        ...response.data,
+        agentList: getSelectedOutletAgents(response.data),
+      };
+      form.value = detail;
+      selectedAgent.value = getPrimaryBusinessFlow(detail);
+      formSnapshot.value = JSON.parse(JSON.stringify(detail));
+      isBasicInfoEditing.value = false;
+    })
+    .catch((error) => {
+      ElMessage.error(error?.message || "无权查看该店铺详情");
+      goBack();
+    });
   refreshMonthlySales();
   refreshVisitHistory();
 }
 
-function refreshVisitHistory() {
+function legacyRefreshVisitHistory() {
   const params = specialPermissions.value
     ? { outletId: route.params.id }
-    : { outletId: route.params.id, agent: userStore.roles[0] };
+    : { outletId: route.params.id, agent: currentBusinessFlowRole.value };
   listHistory(params).then((res) => {
     outletHistoryList.value = res.rows || [];
   });
 }
 
-function refreshMonthlySales() {
+function legacyRefreshMonthlySales() {
   // 权限修改前：月次販売台数列表请求未附带前端角色限制参数。
   listMonthlySales({ outletId: route.params.id, pageNum: 1, pageSize: 1000 }).then((res) => {
     monthlySalesList.value = res.rows || [];
@@ -508,7 +517,7 @@ function cloneSnapshot(snapshot) {
   return snapshot ? JSON.parse(JSON.stringify(snapshot)) : null;
 }
 
-function startEditBasicInfo() {
+function legacyStartEditBasicInfo() {
   formSnapshot.value = cloneSnapshot(form.value);
   isBasicInfoEditing.value = true;
 }
@@ -526,7 +535,7 @@ function formatCurrentMinute() {
     .replace(/\//g, "-");
 }
 
-function handleAddMonthlySales() {
+function legacyHandleAddMonthlySales() {
   // 权限修改前：所有能进入详情页的角色都可以直接打开月次販売台数新增弹窗。
   monthlySalesDialogTitle.value = "新增月次販売台数";
   monthlySalesForm.salesId = null;
@@ -538,7 +547,7 @@ function handleAddMonthlySales() {
   monthlySalesDialogVisible.value = true;
 }
 
-function handleEditMonthlySales(row) {
+function legacyHandleEditMonthlySales(row) {
   monthlySalesDialogTitle.value = "编辑月次販売台数";
   monthlySalesForm.salesId = row.salesId;
   monthlySalesForm.outletId = row.outletId;
@@ -549,7 +558,7 @@ function handleEditMonthlySales(row) {
   monthlySalesDialogVisible.value = true;
 }
 
-function saveMonthlySales() {
+function legacySaveMonthlySales() {
   if (!monthlySalesForm.salesMonth) {
     ElMessage.error("请选择年月");
     return;
@@ -568,7 +577,7 @@ function saveMonthlySales() {
   });
 }
 
-function handleDeleteMonthlySales() {
+function legacyHandleDeleteMonthlySales() {
   if (checkedMonthlySales.value.length == 0) {
     ElMessage.error("请选择要删除的月次販売台数");
     return;
@@ -588,13 +597,13 @@ function handleDeleteMonthlySales() {
   });
 }
 
-function handleAddVisitHistory() {
+function legacyHandleAddVisitHistory() {
   // 权限修改前：所有能进入详情页的角色都可以直接打开商流营业访问履历新增弹窗。
   visitForm.remark = "";
   visitDialogVisible.value = true;
 }
 
-function saveVisitHistory() {
+function legacySaveVisitHistory() {
   if (!visitForm.remark.trim()) {
     ElMessage.error(t("outlet.remarkRequired"));
     return;
@@ -620,7 +629,7 @@ function saveVisitHistory() {
     });
 }
 
-function handleDeleteVisitHistory() {
+function legacyHandleDeleteVisitHistory() {
   if (checkedOutletHistory.value.length == 0) {
     ElMessage.error(t("outlet.selectHistoryFirst"));
     return;
@@ -661,6 +670,214 @@ function stripRemovedOutletFields(outlet) {
   return visibleOutlet;
 }
 
+function legacySubmitForm() {
+  if (!basicInfoEditable.value) {
+    return;
+  }
+  proxy.$refs["outletRef"].validate((valid) => {
+    if (!valid) {
+      return;
+    }
+    getAddressCoordinates(form.value.headquartersAddress)
+      .then(({ lat, lng }) => {
+        const formData = {
+          ...stripRemovedOutletFields(applySelectedOutletAgents(form.value)),
+          lat,
+          lng,
+        };
+
+        updateOutlet(formData).then(() => {
+          ElMessage.success(t("common.successEdit"));
+          isBasicInfoEditing.value = false;
+          formSnapshot.value = cloneSnapshot(form.value);
+          router.go(-1);
+        });
+      })
+      .catch((error) => {
+        ElMessage.error(error.message);
+      });
+  });
+}
+
+function refreshMonthlySales() {
+  listMonthlySales({ outletId: route.params.id, pageNum: 1, pageSize: 1000 }).then((res) => {
+    monthlySalesList.value = res.rows || [];
+  });
+}
+
+function startEditBasicInfo() {
+  formSnapshot.value = cloneSnapshot(form.value);
+  selectedAgent.value = getPrimaryBusinessFlow(form.value);
+  isBasicInfoEditing.value = true;
+}
+
+function getDetail() {
+  const id = route.params.id;
+  getOutlet(id)
+    .then((response) => {
+      const detail = {
+        ...response.data,
+        agentList: getSelectedOutletAgents(response.data),
+      };
+      form.value = detail;
+      selectedAgent.value = getPrimaryBusinessFlow(detail);
+      formSnapshot.value = JSON.parse(JSON.stringify(detail));
+      isBasicInfoEditing.value = false;
+    })
+    .catch((error) => {
+      ElMessage.error(error?.message || "无权查看该店铺详情");
+      goBack();
+    });
+  refreshMonthlySales();
+  refreshVisitHistory();
+}
+
+function refreshVisitHistory() {
+  const params = specialPermissions.value
+    ? { outletId: route.params.id }
+    : { outletId: route.params.id, agent: currentBusinessFlowRole.value };
+  listHistory(params).then((res) => {
+    outletHistoryList.value = res.rows || [];
+  });
+}
+
+function handleAddMonthlySales() {
+  if (!canManageRelatedData.value) {
+    return;
+  }
+  monthlySalesDialogTitle.value = "新增月次販売台数";
+  monthlySalesForm.salesId = null;
+  monthlySalesForm.outletId = route.params.id;
+  monthlySalesForm.salesMonth = "";
+  monthlySalesForm.quantity = 0;
+  monthlySalesForm.productName = "";
+  monthlySalesForm.remark = "";
+  monthlySalesDialogVisible.value = true;
+}
+
+function handleEditMonthlySales(row) {
+  if (!canManageRelatedData.value) {
+    return;
+  }
+  monthlySalesDialogTitle.value = "编辑月次販売台数";
+  monthlySalesForm.salesId = row.salesId;
+  monthlySalesForm.outletId = row.outletId;
+  monthlySalesForm.salesMonth = row.salesMonth;
+  monthlySalesForm.quantity = row.quantity;
+  monthlySalesForm.productName = row.productName;
+  monthlySalesForm.remark = row.remark;
+  monthlySalesDialogVisible.value = true;
+}
+
+function saveMonthlySales() {
+  if (!canManageRelatedData.value) {
+    return;
+  }
+  if (!monthlySalesForm.salesMonth) {
+    ElMessage.error("请选择年月");
+    return;
+  }
+  const payload = {
+    ...monthlySalesForm,
+    outletId: route.params.id,
+    updatedBy: currentUserLabel(),
+    updatedAt: formatCurrentMinute(),
+  };
+  const request = payload.salesId ? updateMonthlySales(payload) : addMonthlySales(payload);
+  request.then(() => {
+    monthlySalesDialogVisible.value = false;
+    refreshMonthlySales();
+    ElMessage.success(payload.salesId ? t("common.successEdit") : t("common.successAdd"));
+  });
+}
+
+function handleDeleteMonthlySales() {
+  if (!canManageRelatedData.value) {
+    return;
+  }
+  if (checkedMonthlySales.value.length == 0) {
+    ElMessage.error("请选择要删除的月次販売台数");
+    return;
+  }
+  const salesIds = monthlySalesList.value
+    .filter((item) => checkedMonthlySales.value.includes(item.index))
+    .map((item) => item.salesId)
+    .filter((salesId) => salesId !== undefined && salesId !== null);
+  if (salesIds.length === 0) {
+    ElMessage.error("月次販売台数ID未找到");
+    return;
+  }
+  delMonthlySales(salesIds.join(",")).then(() => {
+    checkedMonthlySales.value = [];
+    refreshMonthlySales();
+    ElMessage.success(t("common.successDelete"));
+  });
+}
+
+function handleAddVisitHistory() {
+  if (!canManageRelatedData.value) {
+    return;
+  }
+  visitForm.remark = "";
+  visitDialogVisible.value = true;
+}
+
+function saveVisitHistory() {
+  if (!canManageRelatedData.value) {
+    return;
+  }
+  if (!visitForm.remark.trim()) {
+    ElMessage.error(t("outlet.remarkRequired"));
+    return;
+  }
+
+  const obj = {
+    remark: visitForm.remark,
+    updatedBy: currentUserLabel(),
+    createdBy: userStore.name || t("common.unknownUser"),
+    outletId: route.params.id,
+    agent: specialPermissions.value ? userStore.roles[0] : currentBusinessFlowRole.value,
+    updatedAt: formatCurrentMinute(),
+  };
+
+  addHistory(obj)
+    .then(() => {
+      refreshVisitHistory();
+      visitDialogVisible.value = false;
+      ElMessage.success(t("common.successAdd"));
+    })
+    .catch((error) => {
+      ElMessage.error(t("outlet.addFailed", { message: error.message || "unknown" }));
+    });
+}
+
+function handleDeleteVisitHistory() {
+  if (!canManageRelatedData.value) {
+    return;
+  }
+  if (checkedOutletHistory.value.length == 0) {
+    ElMessage.error(t("outlet.selectHistoryFirst"));
+    return;
+  }
+  const historyIds = outletHistoryList.value
+    .filter((item) => checkedOutletHistory.value.includes(item.index))
+    .map((item) => item.historyId)
+    .filter((historyId) => historyId !== undefined);
+  if (historyIds.length === 0) {
+    ElMessage.error(t("outlet.historyIdMissing"));
+    return;
+  }
+  delHistory(historyIds.join(","))
+    .then(() => {
+      checkedOutletHistory.value = [];
+      refreshVisitHistory();
+      ElMessage.success(t("common.successDelete"));
+    })
+    .catch((error) => {
+      ElMessage.error(t("outlet.deleteFailed", { message: error.message || "unknown" }));
+    });
+}
+
 function submitForm() {
   if (!basicInfoEditable.value) {
     return;
@@ -671,6 +888,7 @@ function submitForm() {
     }
     getAddressCoordinates(form.value.headquartersAddress)
       .then(({ lat, lng }) => {
+        form.value.agentList = selectedAgent.value ? [selectedAgent.value] : [];
         const formData = {
           ...stripRemovedOutletFields(applySelectedOutletAgents(form.value)),
           lat,

@@ -41,18 +41,10 @@ public class TabOutletServiceImpl implements ITabOutletService
         TabOutlet tabOutlet = tabOutletMapper.selectTabOutletById(id);
         if (tabOutlet != null)
         {
-            List<String> agentNames = tabOutletMapper.selectOutletAgentNames(id);
-            validateOutletAccess(agentNames);
-            if (AgentRoleUtil.canViewAllData(SecurityUtils.getAuthentication()))
-            {
-                tabOutlet.setAgentList(agentNames);
-            }
-            else
-            {
-                List<String> visibleAgentNames = new ArrayList<String>(agentNames);
-                visibleAgentNames.retainAll(getCurrentBusinessFlows());
-                tabOutlet.setAgentList(visibleAgentNames);
-            }
+            List<String> primaryAgentNames = getPrimaryOutletAgents(id);
+            validateOutletAccess(primaryAgentNames);
+            tabOutlet.setAgentList(resolveVisibleAgentNames(primaryAgentNames));
+            tabOutlet.setOutletHistoryList(filterVisibleOutletHistory(tabOutlet.getOutletHistoryList()));
         }
         return tabOutlet;
     }
@@ -189,10 +181,10 @@ public class TabOutletServiceImpl implements ITabOutletService
     private void syncOutletAgents(TabOutlet tabOutlet)
     {
         tabOutletMapper.deleteOutletAgentsByOutletId(tabOutlet.getId());
-        List<String> agentNames = tabOutlet.getAgentList();
+        List<String> agentNames = AgentRoleUtil.keepPrimaryBusinessFlow(tabOutlet.getAgentList());
         if (StringUtils.isNotEmpty(agentNames))
         {
-            tabOutletMapper.batchOutletAgents(tabOutlet.getId(), Collections.singletonList(agentNames.get(0)));
+            tabOutletMapper.batchOutletAgents(tabOutlet.getId(), agentNames);
         }
     }
 
@@ -245,10 +237,57 @@ public class TabOutletServiceImpl implements ITabOutletService
         }
     }
 
+    private List<String> getPrimaryOutletAgents(String outletId)
+    {
+        return AgentRoleUtil.keepPrimaryBusinessFlow(tabOutletMapper.selectOutletAgentNames(outletId));
+    }
+
+    private List<String> resolveVisibleAgentNames(List<String> primaryAgentNames)
+    {
+        if (AgentRoleUtil.canViewAllData(SecurityUtils.getAuthentication()))
+        {
+            return primaryAgentNames;
+        }
+        List<String> currentBusinessFlows = getCurrentBusinessFlows();
+        if (currentBusinessFlows.isEmpty())
+        {
+            return Collections.emptyList();
+        }
+        return Collections.singletonList(currentBusinessFlows.get(0));
+    }
+
+    private List<OutletHistory> filterVisibleOutletHistory(List<OutletHistory> outletHistoryList)
+    {
+        if (outletHistoryList == null || outletHistoryList.isEmpty()
+                || AgentRoleUtil.canViewAllData(SecurityUtils.getAuthentication()))
+        {
+            return outletHistoryList;
+        }
+        String currentBusinessFlow = AgentRoleUtil.getCurrentBusinessFlow(SecurityUtils.getAuthentication());
+        if (StringUtils.isBlank(currentBusinessFlow))
+        {
+            return Collections.emptyList();
+        }
+        List<OutletHistory> visibleHistory = new ArrayList<OutletHistory>();
+        for (OutletHistory outletHistory : outletHistoryList)
+        {
+            if (outletHistory != null
+                    && currentBusinessFlow.equals(AgentRoleUtil.normalizeBusinessFlowName(outletHistory.getAgent())))
+            {
+                visibleHistory.add(outletHistory);
+            }
+        }
+        return visibleHistory;
+    }
+
     private void applyEditableBusinessFlows(TabOutlet tabOutlet)
     {
         if (tabOutlet == null || AgentRoleUtil.canViewAllData(SecurityUtils.getAuthentication()))
         {
+            if (tabOutlet != null)
+            {
+                tabOutlet.setAgentList(AgentRoleUtil.keepPrimaryBusinessFlow(tabOutlet.getAgentList()));
+            }
             return;
         }
         List<String> businessFlows = getCurrentBusinessFlows();

@@ -111,4 +111,6 @@ public interface TabOutletMapper
 
     int batchOutletAgents(@Param("outletId") String outletId, @Param("agentNames") List<String> agentNames);
 
+    List<String> selectOutletIdsWithMultipleAgents();
+
 }

@@ -211,7 +211,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         select agent_name
         from tab_outlet_agent
         where outlet_id = #{outletId}
-        order by agent_name
+        order by FIELD(agent_name, '織田家', '豊臣家', '徳川家', '武田家', '上杉家'), agent_name
     </select>
 
     <delete id="deleteOutletAgentsByOutletId" parameterType="String">
@@ -231,6 +231,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             (#{outletId}, #{agentName})
         </foreach>
     </insert>
+
+    <select id="selectOutletIdsWithMultipleAgents" resultType="String">
+        select outlet_id
+        from tab_outlet_agent
+        group by outlet_id
+        having count(*) > 1
+    </select>
 
     <insert id="batchOutletHistory">
         insert into tab_outlet_history( history_id, outlet_id, created_by, created_at, updated_by, updated_at, remark, agent) values

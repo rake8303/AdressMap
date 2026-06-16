@@ -19,17 +19,46 @@ export const OUTLET_AGENT_COLORS = {
   [UNDECIDED_BUSINESS_FLOW]: "#FFFFFF",
 };
 
-export function getSelectedOutletAgents(data = {}) {
-  if (Array.isArray(data.agentList)) {
-    return data.agentList;
-  }
+const BUSINESS_FLOW_ORDER = OUTLET_AGENTS.map((item) => item.value);
+const BUSINESS_FLOW_ALIASES = {
+  XSOL: "織田家",
+  DMM: "豊臣家",
+  WWB: "徳川家",
+  高岸: "武田家",
+  韓可: "上杉家",
+};
 
-  return [];
+export function normalizeBusinessFlow(value = "") {
+  const trimmedValue = String(value || "").trim();
+  return BUSINESS_FLOW_ALIASES[trimmedValue] || trimmedValue;
+}
+
+export function sortBusinessFlows(agentList = []) {
+  const normalized = [...new Set((Array.isArray(agentList) ? agentList : []).map(normalizeBusinessFlow).filter(Boolean))];
+  return normalized.sort((left, right) => {
+    const leftIndex = BUSINESS_FLOW_ORDER.indexOf(left);
+    const rightIndex = BUSINESS_FLOW_ORDER.indexOf(right);
+    if (leftIndex === -1 && rightIndex === -1) return left.localeCompare(right);
+    if (leftIndex === -1) return 1;
+    if (rightIndex === -1) return -1;
+    return leftIndex - rightIndex;
+  });
+}
+
+export function getSelectedOutletAgents(data = {}) {
+  if (!Array.isArray(data.agentList)) {
+    return [];
+  }
+  return sortBusinessFlows(data.agentList);
+}
+
+export function getPrimaryBusinessFlow(data = {}) {
+  return getSelectedOutletAgents(data)[0] || "";
 }
 
 export function applySelectedOutletAgents(data = {}) {
-  const agentList = getSelectedOutletAgents(data).slice(0, 1);
-  return { ...data, agentList };
+  const primaryAgent = getPrimaryBusinessFlow(data);
+  return { ...data, agentList: primaryAgent ? [primaryAgent] : [] };
 }
 
 export function canViewAllData(userStore = {}) {
@@ -44,12 +73,14 @@ export function getCurrentBusinessFlowRole(userStore = {}) {
   }
 
   const currentRoles = Array.isArray(userStore.roles) ? userStore.roles : [];
-  return currentRoles.find((role) => !ALL_DATA_ROLE_KEYS.includes(role)) || "";
+  const matchedRole = currentRoles.find((role) => !ALL_DATA_ROLE_KEYS.includes(role));
+  return normalizeBusinessFlow(matchedRole);
 }
 
 export function getVisibleBusinessFlows(agentList = [], userStore = {}) {
+  const sortedAgents = sortBusinessFlows(agentList);
   if (canViewAllData(userStore)) {
-    return Array.isArray(agentList) ? agentList : [];
+    return sortedAgents;
   }
 
   const currentFlow = getCurrentBusinessFlowRole(userStore);
@@ -57,5 +88,5 @@ export function getVisibleBusinessFlows(agentList = [], userStore = {}) {
     return [];
   }
 
-  return (Array.isArray(agentList) ? agentList : []).filter((agent) => agent === currentFlow);
+  return sortedAgents.filter((agent) => agent === currentFlow);
 }
