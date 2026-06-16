@@ -39,6 +39,7 @@ public class OutletHistoryController extends BaseController
     /**
      * 查询販売店管理-历史记录列表
      */
+//    权限修改前：访问履历接口上的 @PreAuthorize 被整体注释，当前仅依赖服务层逻辑控制可见范围。
 //    @PreAuthorize("@ss.hasPermi('system:history:list')")
     @GetMapping("/list")
     public TableDataInfo list(OutletHistory outletHistory)
@@ -74,6 +75,7 @@ public class OutletHistoryController extends BaseController
     /**
      * 新增販売店管理-历史记录
      */
+//    权限修改前：新增接口未启用权限注解。
 //    @PreAuthorize("@ss.hasPermi('system:history:add')")
     @Log(title = "販売店管理-历史记录", businessType = BusinessType.INSERT)
     @PostMapping
@@ -85,6 +87,7 @@ public class OutletHistoryController extends BaseController
     /**
      * 修改販売店管理-历史记录
      */
+//    权限修改前：编辑接口未启用权限注解。
 //    @PreAuthorize("@ss.hasPermi('system:history:edit')")
     @Log(title = "販売店管理-历史记录", businessType = BusinessType.UPDATE)
     @PutMapping
@@ -96,6 +99,7 @@ public class OutletHistoryController extends BaseController
     /**
      * 删除販売店管理-历史记录
      */
+//    权限修改前：删除接口未启用权限注解。
 //    @PreAuthorize("@ss.hasPermi('system:history:remove')")
     @Log(title = "販売店管理-历史记录", businessType = BusinessType.DELETE)
 	@DeleteMapping("/{historyIds}")

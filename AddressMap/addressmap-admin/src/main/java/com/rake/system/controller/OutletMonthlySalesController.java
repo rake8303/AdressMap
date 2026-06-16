@@ -24,6 +24,7 @@ import com.rake.system.service.IOutletMonthlySalesService;
 @RequestMapping("/system/monthlySales")
 public class OutletMonthlySalesController extends BaseController
 {
+    // 权限修改前：本 Controller 的列表/导出/详情/新增/编辑/删除接口均未声明 @PreAuthorize。
     @Autowired
     private IOutletMonthlySalesService outletMonthlySalesService;
 

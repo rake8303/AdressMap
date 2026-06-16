@@ -8,7 +8,25 @@
       <el-form ref="outletRef" :model="form" :rules="rules" label-width="150px">
         <el-card class="mb-3">
           <template #header>
-            <span>{{ $t('outlet.basicInfo') }}</span>
+            <div class="card-header">
+              <span>{{ $t('outlet.basicInfo') }}</span>
+              <div class="card-actions">
+                <el-button
+                  v-if="specialPermissions && !isBasicInfoEditing"
+                  type="primary"
+                  plain
+                  @click="startEditBasicInfo"
+                >
+                  编辑
+                </el-button>
+                <template v-else-if="isBasicInfoEditing">
+                  <el-button type="primary" @click="submitForm">
+                    {{ $t('common.save') }}
+                  </el-button>
+                  <el-button @click="goBack">{{ $t('common.back') }}</el-button>
+                </template>
+              </div>
+            </div>
           </template>
 
           <el-row :gutter="20">
@@ -17,7 +35,7 @@
                 <el-input
                   v-model="form.jpCompanyName"
                   :placeholder="$t('outlet.placeholderCompanyName')"
-                  :disabled="!specialPermissions"
+                  :disabled="!basicInfoEditable"
                 />
               </el-form-item>
             </el-col>
@@ -26,7 +44,7 @@
                 <el-input
                   v-model="form.shortCompanyName"
                   :placeholder="$t('outlet.placeholderShortCompanyName')"
-                  :disabled="!specialPermissions"
+                  :disabled="!basicInfoEditable"
                 />
               </el-form-item>
             </el-col>
@@ -39,7 +57,7 @@
                   v-model="form.region"
                   :placeholder="$t('outlet.placeholderRegion')"
                   style="width: 100%"
-                  :disabled="!specialPermissions"
+                  :disabled="!basicInfoEditable"
                 >
                   <el-option
                     v-for="dict in localizedRegion"
@@ -51,18 +69,49 @@
               </el-form-item>
             </el-col>
             <el-col :span="12">
+              <el-form-item :label="$t('outlet.contactPerson')" prop="contactPerson">
+                <el-input
+                  v-model="form.contactPerson"
+                  :placeholder="$t('outlet.placeholderContactPerson')"
+                  :disabled="!basicInfoEditable"
+                />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="20">
+            <el-col :span="12">
               <el-form-item :label="$t('outlet.companyType')" prop="cpnType">
                 <el-select
                   v-model="form.cpnType"
                   :placeholder="$t('outlet.placeholderCompanyType')"
                   style="width: 100%"
-                  :disabled="!specialPermissions"
+                  :disabled="!basicInfoEditable"
                 >
                   <el-option
                     v-for="dict in localizedCpnType"
                     :key="dict.value"
                     :label="dict.label"
                     :value="dict.value"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item :label="$t('outlet.agent')" prop="agentList">
+                <el-select
+                  class="agent-multi-select"
+                  v-model="form.agentList"
+                  multiple
+                  :placeholder="$t('outlet.placeholderAgent')"
+                  style="width: 100%"
+                  :disabled="!basicInfoEditable"
+                >
+                  <el-option
+                    v-for="agent in OUTLET_AGENTS"
+                    :key="agent.value"
+                    :label="agent.label"
+                    :value="agent.value"
                   />
                 </el-select>
               </el-form-item>
@@ -74,53 +123,16 @@
               v-model="form.headquartersAddress"
               type="textarea"
               :placeholder="$t('outlet.placeholderAddress')"
-              :disabled="!specialPermissions"
-            />
-          </el-form-item>
-
-          <el-form-item :label="$t('outlet.contactPerson')" prop="contactPerson">
-            <el-input
-              v-model="form.contactPerson"
-              :placeholder="$t('outlet.placeholderContactPerson')"
-              :disabled="!specialPermissions"
+              :disabled="!basicInfoEditable"
             />
           </el-form-item>
         </el-card>
 
-        <el-card class="mb-3" v-if="specialPermissions">
-          <template #header>
-            <span>{{ $t('outlet.salesInfo') }}</span>
-          </template>
-
-          <el-form-item :label="$t('outlet.agent')" prop="agentList">
-            <el-select
-              class="agent-multi-select"
-              v-model="form.agentList"
-              multiple
-              :placeholder="$t('outlet.placeholderAgent')"
-              style="width: 100%"
-            >
-              <el-option
-                v-for="agent in OUTLET_AGENTS"
-                :key="agent.value"
-                :label="agent.label"
-                :value="agent.value"
-              />
-            </el-select>
-          </el-form-item>
-
-          <el-form-item :label="$t('outlet.totalSalesAvg')" prop="totalSalesAvg">
-            <el-input
-              v-model="form.totalSalesAvg"
-              :placeholder="$t('outlet.placeholderTotalSalesAvg')"
-            />
-          </el-form-item>
-        </el-card>
-
-        <el-card class="mb-3" v-if="specialPermissions">
+        <el-card class="mb-3">
           <template #header>
             <div class="card-header">
               <span>月次販売台数</span>
+              <!-- 权限修改前：这里的新增/删除/编辑按钮未按角色做前端显隐控制。 -->
               <div>
                 <el-button type="primary" icon="Plus" @click="handleAddMonthlySales">
                   {{ $t('common.add') }}
@@ -159,6 +171,7 @@
           <template #header>
             <div class="card-header">
               <span>{{ $t('outlet.visitHistory') }}</span>
+              <!-- 权限修改前：这里的新增/删除按钮未按角色做前端显隐控制。 -->
               <div>
                 <el-button type="primary" icon="Plus" @click="handleAddVisitHistory">
                   {{ $t('common.add') }}
@@ -185,13 +198,6 @@
           </el-table>
         </el-card>
       </el-form>
-    </div>
-
-    <div class="page-footer">
-      <el-button type="primary" @click="submitForm" v-if="specialPermissions">
-        {{ $t('common.save') }}
-      </el-button>
-      <el-button @click="goBack">{{ $t('common.back') }}</el-button>
     </div>
 
     <el-dialog
@@ -285,6 +291,7 @@ import {
   OUTLET_AGENTS,
   applySelectedOutletAgents,
   getSelectedOutletAgents,
+  canViewAllData,
 } from "@/utils/outletAgents";
 import { loadGoogleMapsScript } from "@/utils/googleMaps";
 
@@ -292,7 +299,7 @@ const route = useRoute();
 const router = useRouter();
 const { te } = useI18n();
 const userStore = useUserStore();
-const specialPermissions = ["admin", "common", "readonly"].includes(userStore.roles[0]);
+const specialPermissions = computed(() => canViewAllData(userStore));
 
 const { proxy } = getCurrentInstance();
 const { region, cpn_type } = proxy.useDict("region", "cpn_type");
@@ -337,8 +344,11 @@ function localizeDictOptions(options, group) {
 const localizedRegion = computed(() => localizeDictOptions(region.value, "region"));
 const localizedCpnType = computed(() => localizeDictOptions(cpn_type.value, "companyType"));
 const title = computed(() => t("outlet.detailTitle"));
+const isBasicInfoEditing = ref(false);
+const basicInfoEditable = computed(() => specialPermissions.value && isBasicInfoEditing.value);
 
 const form = ref({});
+const formSnapshot = ref(null);
 const outletHistoryList = ref([]);
 const checkedOutletHistory = ref([]);
 const monthlySalesList = ref([]);
@@ -392,6 +402,11 @@ function initGeocoder() {
 
 async function getAddressCoordinates(address) {
   return new Promise((resolve, reject) => {
+    const normalizedAddress = (address || "").trim();
+    if (!normalizedAddress) {
+      reject(new Error("请输入完整地址"));
+      return;
+    }
     if (!geocoder) {
       initGeocoder();
       setTimeout(() => {
@@ -399,10 +414,10 @@ async function getAddressCoordinates(address) {
           reject(new Error(t("agent.mapLoadFailed")));
           return;
         }
-        performGeocode(address, resolve, reject);
+        performGeocode(normalizedAddress, resolve, reject);
       }, 1000);
     } else {
-      performGeocode(address, resolve, reject);
+      performGeocode(normalizedAddress, resolve, reject);
     }
   });
 }
@@ -410,13 +425,19 @@ async function getAddressCoordinates(address) {
 function performGeocode(address, resolve, reject) {
   geocoder.geocode({ address }, (results, status) => {
     if (status === "OK" && results[0]) {
+      if (results[0].partial_match) {
+        reject(new Error("地址不够准确，请重新填写完整地址"));
+        return;
+      }
       const location = results[0].geometry.location;
       resolve({
         lat: location.lat(),
         lng: location.lng(),
       });
-    } else {
+    } else if (status === "ZERO_RESULTS") {
       reject(new Error(t("agent.addressNotFound")));
+    } else {
+      reject(new Error(`地址解析失败(${status})，请稍后重试`));
     }
   });
 }
@@ -428,17 +449,20 @@ function goBack() {
 function getDetail() {
   const id = route.params.id;
   getOutlet(id).then((response) => {
-    form.value = {
+    const detail = {
       ...response.data,
       agentList: getSelectedOutletAgents(response.data),
     };
+    form.value = detail;
+    formSnapshot.value = JSON.parse(JSON.stringify(detail));
+    isBasicInfoEditing.value = false;
   });
   refreshMonthlySales();
   refreshVisitHistory();
 }
 
 function refreshVisitHistory() {
-  const params = specialPermissions
+  const params = specialPermissions.value
     ? { outletId: route.params.id }
     : { outletId: route.params.id, agent: userStore.roles[0] };
   listHistory(params).then((res) => {
@@ -447,6 +471,7 @@ function refreshVisitHistory() {
 }
 
 function refreshMonthlySales() {
+  // 权限修改前：月次販売台数列表请求未附带前端角色限制参数。
   listMonthlySales({ outletId: route.params.id, pageNum: 1, pageSize: 1000 }).then((res) => {
     monthlySalesList.value = res.rows || [];
   });
@@ -479,6 +504,15 @@ function currentUserLabel() {
   return `${userStore.name || t("common.unknownUser")}(${getRolesAsString()})`;
 }
 
+function cloneSnapshot(snapshot) {
+  return snapshot ? JSON.parse(JSON.stringify(snapshot)) : null;
+}
+
+function startEditBasicInfo() {
+  formSnapshot.value = cloneSnapshot(form.value);
+  isBasicInfoEditing.value = true;
+}
+
 function formatCurrentMinute() {
   return new Date()
     .toLocaleString("zh-CN", {
@@ -493,6 +527,7 @@ function formatCurrentMinute() {
 }
 
 function handleAddMonthlySales() {
+  // 权限修改前：所有能进入详情页的角色都可以直接打开月次販売台数新增弹窗。
   monthlySalesDialogTitle.value = "新增月次販売台数";
   monthlySalesForm.salesId = null;
   monthlySalesForm.outletId = route.params.id;
@@ -504,7 +539,7 @@ function handleAddMonthlySales() {
 }
 
 function handleEditMonthlySales(row) {
-  monthlySalesDialogTitle.value = "修改月次販売台数";
+  monthlySalesDialogTitle.value = "编辑月次販売台数";
   monthlySalesForm.salesId = row.salesId;
   monthlySalesForm.outletId = row.outletId;
   monthlySalesForm.salesMonth = row.salesMonth;
@@ -543,7 +578,7 @@ function handleDeleteMonthlySales() {
     .map((item) => item.salesId)
     .filter((salesId) => salesId !== undefined && salesId !== null);
   if (salesIds.length === 0) {
-    ElMessage.error("月次販売台数IDが見つかりません");
+    ElMessage.error("月次販売台数ID未找到");
     return;
   }
   delMonthlySales(salesIds.join(",")).then(() => {
@@ -554,6 +589,7 @@ function handleDeleteMonthlySales() {
 }
 
 function handleAddVisitHistory() {
+  // 权限修改前：所有能进入详情页的角色都可以直接打开商流营业访问履历新增弹窗。
   visitForm.remark = "";
   visitDialogVisible.value = true;
 }
@@ -626,6 +662,9 @@ function stripRemovedOutletFields(outlet) {
 }
 
 function submitForm() {
+  if (!basicInfoEditable.value) {
+    return;
+  }
   proxy.$refs["outletRef"].validate((valid) => {
     if (!valid) {
       return;
@@ -640,6 +679,8 @@ function submitForm() {
 
         updateOutlet(formData).then(() => {
           ElMessage.success(t("common.successEdit"));
+          isBasicInfoEditing.value = false;
+          formSnapshot.value = cloneSnapshot(form.value);
           router.go(-1);
         });
       })
@@ -687,9 +728,10 @@ function submitForm() {
   align-items: center;
 }
 
-:deep(.el-card__header) {
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
+.card-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .agent-multi-select :deep(.el-select__selection) {
@@ -704,5 +746,10 @@ function submitForm() {
 
 .agent-multi-select :deep(.el-tag) {
   max-width: none;
+}
+
+:deep(.el-card__header) {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
 }
 </style>
