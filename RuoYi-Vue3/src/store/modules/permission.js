@@ -7,6 +7,7 @@ import InnerLink from '@/layout/components/InnerLink'
 
 // 匹配views里面所有的.vue文件
 const modules = import.meta.glob('./../../views/**/*.vue')
+const DISABLED_ROUTE_PREFIXES = ['/agent']
 
 const usePermissionStore = defineStore(
   'permission',
@@ -39,9 +40,9 @@ const usePermissionStore = defineStore(
             const sdata = JSON.parse(JSON.stringify(res.data))
             const rdata = JSON.parse(JSON.stringify(res.data))
             const defaultData = JSON.parse(JSON.stringify(res.data))
-            const sidebarRoutes = filterAsyncRouter(sdata)
-            const rewriteRoutes = filterAsyncRouter(rdata, false, true)
-            const defaultRoutes = filterAsyncRouter(defaultData)
+            const sidebarRoutes = pruneHiddenMenus(filterAsyncRouter(sdata))
+            const rewriteRoutes = pruneHiddenMenus(filterAsyncRouter(rdata, false, true))
+            const defaultRoutes = pruneHiddenMenus(filterAsyncRouter(defaultData))
             const asyncRoutes = filterDynamicRoutes(dynamicRoutes)
             asyncRoutes.forEach(route => { router.addRoute(route) })
             this.setRoutes(rewriteRoutes)
@@ -94,6 +95,21 @@ function filterChildren(childrenMap, lastRouter = false) {
     }
   })
   return children
+}
+
+function pruneHiddenMenus(routes = []) {
+  return routes
+    .filter(route => !isDisabledRoute(route.path))
+    .map(route => {
+      if (route.children && route.children.length) {
+        route.children = pruneHiddenMenus(route.children)
+      }
+      return route
+    })
+}
+
+function isDisabledRoute(path = '') {
+  return DISABLED_ROUTE_PREFIXES.some(prefix => path === prefix || path.startsWith(`${prefix}/`))
 }
 
 // 动态路由遍历，验证是否具备权限

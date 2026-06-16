@@ -12,13 +12,23 @@ import usePermissionStore from '@/store/modules/permission'
 NProgress.configure({ showSpinner: false })
 
 const whiteList = ['/login', '/register']
+const disabledRoutePrefixes = ['/agent']
 
 const isWhiteList = (path) => {
   return whiteList.some(pattern => isPathMatch(pattern, path))
 }
 
+const isDisabledRoute = (path) => {
+  return disabledRoutePrefixes.some(prefix => path === prefix || path.startsWith(`${prefix}/`))
+}
+
 router.beforeEach((to, from, next) => {
   NProgress.start()
+  if (isDisabledRoute(to.path)) {
+    next('/404')
+    NProgress.done()
+    return
+  }
   if (getToken()) {
     to.meta.title && useSettingsStore().setTitle(to.meta.title)
     /* has token*/
