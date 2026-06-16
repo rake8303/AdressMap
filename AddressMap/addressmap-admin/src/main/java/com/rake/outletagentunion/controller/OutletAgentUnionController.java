@@ -40,9 +40,13 @@ public class OutletAgentUnionController
     public AjaxResult listByBusinessflow(Authentication authentication)
     {
         List<String> businessflows = AgentRoleUtil.getAgentRoleNames(authentication);
-        if (businessflows.isEmpty())
+        if (AgentRoleUtil.canViewAllData(authentication))
         {
             return AjaxResult.success(service.selectOutletAgentUnionList());
+        }
+        if (businessflows.isEmpty())
+        {
+            return AjaxResult.success(java.util.Collections.emptyList());
         }
         return AjaxResult.success(service.selectOutletAgentUnionListByBusinessflow(businessflows));
     }

@@ -1,5 +1,5 @@
 ﻿<template>
-  <div style="display: flex; flex-direction: column; height: 100vh;">
+  <div class="googlemap-page">
     <!-- 筛选区域 - 自适应高度 -->
     <div style="flex: 0 0 auto;">
       <!-- 筛选与统计 -->
@@ -49,15 +49,6 @@
               <span class="filter-pill__swatch filter-pill__swatch--white"></span>
               {{ $t('map.undecided') }}
             </button>
-            <button
-              type="button"
-              class="filter-pill filter-pill--legend"
-              :class="{ 'is-active': selectedBusinessFlows.includes(MULTI_BUSINESS_FLOW) }"
-              @click="toggleBusinessFlow(MULTI_BUSINESS_FLOW)"
-            >
-              <span class="filter-pill__swatch filter-pill__swatch--multi"></span>
-              複数商流
-            </button>
           </div>
         </div>
 
@@ -66,22 +57,56 @@
     </div>
 
 
-    <!-- 地图区域 - 占据剩余空间 -->
-    <div class="map-shell">
-      <div class="region-legend">
-        <button
-          v-for="area in detailedRegionAreas"
-          :key="area.name"
-          type="button"
-          class="region-legend__item"
-          :class="{ 'is-active': isRegionLegendActive(area), 'is-muted': !isRegionLegendActive(area) }"
-          @click="toggleRegionArea(area)"
-        >
-          <span class="region-legend__swatch" :style="{ backgroundColor: area.color }"></span>
-          <span>{{ area.name }}</span>
-        </button>
-      </div>
-      <div id="google-map" style="width: 100%; height: 100%;"></div>
+    <div class="content-shell">
+      <section class="analysis-panel">
+        <div class="analysis-panel__header">
+          <div>
+            <h3 class="analysis-title">月次販売台数数据分析及趋势</h3>
+            <p class="analysis-subtitle">随区域与商流筛选联动，展示当前可见门店的月次变化。</p>
+          </div>
+          <span class="analysis-badge">{{ salesTrendSummary.monthCount }} 个月</span>
+        </div>
+
+        <div class="analysis-metrics">
+          <div class="analysis-card">
+            <span class="analysis-card__label">总销量</span>
+            <strong class="analysis-card__value">{{ formatCompactNumber(salesTrendSummary.totalQuantity) }}</strong>
+          </div>
+          <div class="analysis-card">
+            <span class="analysis-card__label">月均销量</span>
+            <strong class="analysis-card__value">{{ formatCompactNumber(salesTrendSummary.averageQuantity) }}</strong>
+          </div>
+          <div class="analysis-card">
+            <span class="analysis-card__label">参与门店</span>
+            <strong class="analysis-card__value">{{ salesTrendSummary.activeOutletCount }}</strong>
+          </div>
+          <div class="analysis-card">
+            <span class="analysis-card__label">峰值月份</span>
+            <strong class="analysis-card__value">{{ salesTrendSummary.peakMonthLabel }}</strong>
+          </div>
+        </div>
+
+        <div ref="salesChartRef" class="sales-chart"></div>
+      </section>
+
+      <section class="map-panel">
+        <div class="map-shell">
+          <div class="region-legend">
+            <button
+              v-for="area in detailedRegionAreas"
+              :key="area.name"
+              type="button"
+              class="region-legend__item"
+              :class="{ 'is-active': isRegionLegendActive(area), 'is-muted': !isRegionLegendActive(area) }"
+              @click="toggleRegionArea(area)"
+            >
+              <span class="region-legend__swatch" :style="{ backgroundColor: area.color }"></span>
+              <span>{{ area.name }}</span>
+            </button>
+          </div>
+          <div id="google-map" class="google-map"></div>
+        </div>
+      </section>
     </div>
 
     <!-- 加载模态框 -->
@@ -95,32 +120,38 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue'
+import * as echarts from 'echarts'
 import { listOutletAgentUnion,listOutletAgentUnionbybusinessflow } from '@/api/mymap/mymap'
 import { listHistory } from "@/api/system/history";
+import { listMonthlySales } from '@/api/system/monthlySales'
 
 import useUserStore from "@/store/modules/user";
 import { useRouter } from 'vue-router'
-import { OUTLET_AGENTS, OUTLET_AGENT_COLORS, UNDECIDED_BUSINESS_FLOW } from '@/utils/outletAgents'
+import { OUTLET_AGENTS, OUTLET_AGENT_COLORS, UNDECIDED_BUSINESS_FLOW, canViewAllData } from '@/utils/outletAgents'
 import { loadGoogleMapsScript } from '@/utils/googleMaps'
 
 const router = useRouter()
 const outletHistoryList = ref([]);
 const userStore = useUserStore();
 const currentRole = computed(() => userStore.roles?.[0] || '')
-const specialPermissions = computed(() => ["admin", "common", "readonly"].includes(currentRole.value));
+const specialPermissions = computed(() => canViewAllData(userStore));
 
 // 选中的地图区域 key，由右下角图例控制
 const selectedRegions = ref(['中国', '中部', '九州', '北陸', '四国', '東北', '関東', '関西', '北海道'])
 
 // 商流筛选
 const businessFlows = ref(OUTLET_AGENTS)
-const MULTI_BUSINESS_FLOW = '__MULTI_BUSINESS_FLOW__'
-const selectedBusinessFlows = ref([...businessFlows.value.map(flow => flow.value), UNDECIDED_BUSINESS_FLOW, MULTI_BUSINESS_FLOW]) // 默认全选
+const selectedBusinessFlows = ref([...businessFlows.value.map(flow => flow.value), UNDECIDED_BUSINESS_FLOW]) // 默认全选
 const selectAllBusinessFlows = ref(true) // 商流全选状态
 
 // 加载状态
 const loading = ref(true)
+const monthlySalesList = ref([])
+const visibleOutletIds = ref([])
+const salesChartRef = ref(null)
+let salesChartInstance = null
+let salesChartResizeHandler = null
 
 const map = ref(null)
 const allMarkers = ref([]) // 存储所有标记
@@ -252,28 +283,9 @@ const markerIcons = {
   }
 }
 
-const multiBusinessFlowIconUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="34" height="42" viewBox="0 0 34 42">
-      <defs>
-        <filter id="shadow" x="-35%" y="-25%" width="170%" height="170%">
-          <feDropShadow dx="0" dy="2.4" stdDeviation="2" flood-color="#111827" flood-opacity="0.25"/>
-        </filter>
-        <linearGradient id="rim" x1="7" y1="5" x2="27" y2="31" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stop-color="#D52B1E"/>
-          <stop offset="0.55" stop-color="#B91C1C"/>
-          <stop offset="1" stop-color="#7F1D1D"/>
-        </linearGradient>
-      </defs>
-      <path d="M17 39s12-12.1 12-22.2C29 9.8 23.6 4 17 4S5 9.8 5 16.8C5 26.9 17 39 17 39z" fill="url(#rim)" filter="url(#shadow)"/>
-      <circle cx="17" cy="16.7" r="9.5" fill="#FFFFFF" stroke="#F4C430" stroke-width="2.2"/>
-      <path d="M17 9.1l2.05 4.15 4.58.67-3.31 3.23.78 4.57L17 19.56l-4.1 2.16.78-4.57-3.31-3.23 4.58-.67L17 9.1z" fill="#C7000B"/>
-      <circle cx="17" cy="16.7" r="12.7" fill="none" stroke="#FFFFFF" stroke-width="1.6" opacity="0.9"/>
-    </svg>
-  `)
-
 function handleSelectAllBusinessFlows() {
   if (selectAllBusinessFlows.value) {
-            selectedBusinessFlows.value = [...businessFlows.value.map(flow => flow.value), UNDECIDED_BUSINESS_FLOW, MULTI_BUSINESS_FLOW]
+    selectedBusinessFlows.value = [...businessFlows.value.map(flow => flow.value), UNDECIDED_BUSINESS_FLOW]
   } else {
     selectedBusinessFlows.value = []
   }
@@ -300,7 +312,7 @@ function toggleSelectedValue(targetRef, value) {
 }
 
 function handleBusinessFlowChange() {
-  const allBusinessFlows = [...businessFlows.value.map(flow => flow.value), UNDECIDED_BUSINESS_FLOW, MULTI_BUSINESS_FLOW]
+  const allBusinessFlows = [...businessFlows.value.map(flow => flow.value), UNDECIDED_BUSINESS_FLOW]
   selectAllBusinessFlows.value = selectedBusinessFlows.value.length === allBusinessFlows.length
   filterMarkers()
 }
@@ -410,10 +422,9 @@ function updateRegionOverlays() {
 function isBusinessFlowVisible(businessFlow) {
   const selectedFlows = selectedBusinessFlows.value
   if (selectedFlows.length === 0) return false
-  if (businessFlow.length > 1) return selectedFlows.includes(MULTI_BUSINESS_FLOW)
   if (selectedFlows.includes(UNDECIDED_BUSINESS_FLOW) && businessFlow.length === 0) return true
   return selectedFlows
-    .filter(flow => flow !== UNDECIDED_BUSINESS_FLOW && flow !== MULTI_BUSINESS_FLOW)
+    .filter(flow => flow !== UNDECIDED_BUSINESS_FLOW)
     .some(flow => businessFlow.includes(flow))
 }
 
@@ -441,6 +452,10 @@ function filterMarkers() {
   selectedMarkers.forEach(marker => {
     marker.setVisible(true)
   })
+
+  visibleOutletIds.value = selectedMarkers
+    .map(marker => String(marker.agentData?.id || ''))
+    .filter(Boolean)
 
   updateMapBounds(selectedMarkers)
 }
@@ -490,14 +505,6 @@ function getOutletMarkerIcon(outlet) {
   const businessFlows = outlet.businessflow
     ? outlet.businessflow.split(',').map(flow => flow.trim()).filter(Boolean)
     : []
-
-  if (businessFlows.length > 1) {
-    return {
-      url: multiBusinessFlowIconUrl,
-      scaledSize: new window.google.maps.Size(30, 37),
-      anchor: new window.google.maps.Point(15, 36)
-    }
-  }
 
   return markerIcons[businessFlows[0]] || markerIcons.default
 }
@@ -587,6 +594,163 @@ const stats = computed(() => {
   }
 })
 
+const filteredMonthlySales = computed(() => {
+  const visibleIds = visibleOutletIds.value.filter(Boolean)
+  const rows = monthlySalesList.value || []
+  if (!allMarkers.value || allMarkers.value.length === 0) {
+    return rows
+  }
+  if (visibleIds.length === 0) {
+    return []
+  }
+  return rows.filter(row => visibleIds.includes(String(row.outletId || '')))
+})
+
+const salesTrendList = computed(() => {
+  const monthMap = new Map()
+  filteredMonthlySales.value.forEach(row => {
+    const month = normalizeMonthLabel(row.salesMonth)
+    const quantity = Number(row.quantity) || 0
+    monthMap.set(month, (monthMap.get(month) || 0) + quantity)
+  })
+
+  return Array.from(monthMap.entries())
+    .map(([salesMonth, quantity]) => ({ salesMonth, quantity }))
+    .sort((left, right) => String(left.salesMonth).localeCompare(String(right.salesMonth)))
+    .slice(-6)
+})
+
+const salesTrendSummary = computed(() => {
+  const trendRows = salesTrendList.value
+  const totalQuantity = trendRows.reduce((sum, item) => sum + item.quantity, 0)
+  const peakItem = trendRows.reduce((currentPeak, item) => {
+    if (!currentPeak || item.quantity > currentPeak.quantity) {
+      return item
+    }
+    return currentPeak
+  }, null)
+  const activeOutletCount = new Set(filteredMonthlySales.value.map(row => row.outletId).filter(Boolean)).size
+
+  return {
+    totalQuantity,
+    averageQuantity: trendRows.length > 0 ? totalQuantity / trendRows.length : 0,
+    monthCount: trendRows.length,
+    activeOutletCount,
+    peakMonthLabel: peakItem ? peakItem.salesMonth : '—'
+  }
+})
+
+function formatCompactNumber(value) {
+  const numberValue = Number(value) || 0
+  return numberValue.toLocaleString('zh-CN')
+}
+
+function normalizeMonthLabel(value) {
+  const text = String(value ?? '').trim()
+  if (!text) return '未知月份'
+  if (/^\d{4}[-/]\d{1,2}$/.test(text)) {
+    const [year, month] = text.split(/[-/]/)
+    return `${year}-${month.padStart(2, '0')}`
+  }
+  return text
+}
+
+function disposeSalesChart() {
+  if (salesChartResizeHandler) {
+    window.removeEventListener('resize', salesChartResizeHandler)
+    salesChartResizeHandler = null
+  }
+  if (salesChartInstance) {
+    salesChartInstance.dispose()
+    salesChartInstance = null
+  }
+}
+
+function renderSalesChart() {
+  if (!salesChartRef.value) return
+
+  const chartData = salesTrendList.value.map(item => ({
+    name: normalizeMonthLabel(item.salesMonth),
+    value: item.quantity
+  }))
+
+  if (!salesChartInstance) {
+    salesChartInstance = echarts.init(salesChartRef.value)
+  }
+
+  salesChartInstance.setOption({
+    tooltip: {
+      trigger: 'axis'
+    },
+    grid: {
+      left: 40,
+      right: 20,
+      top: 30,
+      bottom: 30,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: chartData.map(item => item.name),
+      axisLabel: {
+        color: '#475569'
+      }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: '#475569'
+      }
+    },
+    series: [
+      {
+        name: '月次販売台数',
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 8,
+        data: chartData.map(item => item.value),
+        areaStyle: {
+          color: 'rgba(64, 158, 255, 0.16)'
+        },
+        lineStyle: {
+          color: '#409eff',
+          width: 3
+        },
+        itemStyle: {
+          color: '#409eff'
+        }
+      }
+    ]
+  })
+
+  if (!salesChartResizeHandler) {
+    salesChartResizeHandler = () => {
+      salesChartInstance?.resize()
+    }
+    window.addEventListener('resize', salesChartResizeHandler)
+  }
+}
+
+async function loadMonthlySalesData() {
+  try {
+    const res = await listMonthlySales({ pageNum: 1, pageSize: 10000 })
+    monthlySalesList.value = res.rows || []
+  } catch (error) {
+    console.error('获取月次販売台数失败:', error)
+    monthlySalesList.value = []
+  }
+}
+
+watch(
+  salesTrendList,
+  async () => {
+    await nextTick()
+    renderSalesChart()
+  },
+  { deep: true }
+)
+
 function showMarkerInfo(marker) {
   // 检查 Google Maps API 是否已加载
   if (!window.google || !window.google.maps) {
@@ -598,7 +762,7 @@ function showMarkerInfo(marker) {
   // 增加信息窗口宽度到450px
   let content = '<div style="max-width: 450px; font-family: \'Microsoft YaHei\', sans-serif;">'
   const companyName = escapeHtml(data.jpCompanyName)
-  const businessflow = escapeHtml(data.businessflow || UNDECIDED_BUSINESS_FLOW)
+  const businessflow = escapeHtml((data.businessflow || UNDECIDED_BUSINESS_FLOW).split(',')[0].trim())
   const hasBusinessFlow = Boolean(data.businessflow)
 
   // 会社名和查看详细按钮 - 同一行
@@ -784,11 +948,14 @@ onMounted(async () => {
     // 显示加载模态框
     loading.value = true;
 
-    const res = specialPermissions.value
-      ? await listOutletAgentUnion()
-      : await listOutletAgentUnionbybusinessflow();
+    const [res] = await Promise.all([
+      specialPermissions.value
+        ? listOutletAgentUnion()
+        : listOutletAgentUnionbybusinessflow(),
+      loadMonthlySalesData(),
+      loadGoogleMapsScript()
+    ])
 
-    await loadGoogleMapsScript()
     initMap(res.data || []);
   } catch (e) {
     console.error('获取数据失败:', e);
@@ -802,11 +969,130 @@ onMounted(async () => {
   }
 });
 
+onBeforeUnmount(() => {
+  disposeSalesChart()
+})
+
 
 
 </script>
 
 <style scoped>
+.googlemap-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+}
+
+.content-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(320px, 38%) minmax(0, 1fr);
+  gap: 12px;
+  padding: 0 10px 10px;
+}
+
+.analysis-panel,
+.map-panel {
+  min-width: 0;
+  min-height: 0;
+  background: #fff;
+  border: 1px solid #e5eaf2;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.analysis-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.analysis-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.analysis-title {
+  margin: 0;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+.analysis-subtitle {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.analysis-badge {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.analysis-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.analysis-card {
+  padding: 12px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+  border: 1px solid #dbeafe;
+}
+
+.analysis-card__label {
+  display: block;
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.analysis-card__value {
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.sales-chart {
+  width: 100%;
+  height: 340px;
+  border-radius: 10px;
+  border: 1px solid #edf2f7;
+  background: #fff;
+}
+
+.map-panel {
+  display: flex;
+  min-height: 0;
+}
+
+.map-shell {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.google-map {
+  width: 100%;
+  height: 100%;
+}
+
 .filter-row {
   display: grid;
   grid-template-columns: 76px 1fr;
@@ -878,32 +1164,6 @@ onMounted(async () => {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.95);
 }
 
-.filter-pill__swatch--multi {
-  position: relative;
-  width: 18px;
-  height: 18px;
-  background: radial-gradient(circle at 50% 45%, #ffffff 0 46%, transparent 48%),
-    linear-gradient(135deg, #d52b1e 0%, #b91c1c 66%, #7f1d1d 100%);
-  border-color: #f4c430;
-  box-shadow: 0 1px 3px rgba(17, 24, 39, 0.22);
-}
-
-.filter-pill__swatch--multi::after {
-  content: '★';
-  position: absolute;
-  inset: 1px 0 0 0;
-  color: #c7000b;
-  font-size: 12px;
-  line-height: 18px;
-  text-align: center;
-}
-
-.map-shell {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
 .region-legend {
   position: absolute;
   right: 14px;
@@ -962,6 +1222,26 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
+  .content-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-panel {
+    padding: 12px;
+  }
+
+  .analysis-panel__header {
+    flex-direction: column;
+  }
+
+  .analysis-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .sales-chart {
+    height: 260px;
+  }
+
   .filter-row {
     grid-template-columns: 1fr;
   }

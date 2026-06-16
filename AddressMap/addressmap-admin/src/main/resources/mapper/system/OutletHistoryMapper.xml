@@ -28,6 +28,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="updatedBy != null  and updatedBy != ''"> and updated_by = #{updatedBy}</if>
             <if test="updatedAt != null "> and updated_at = #{updatedAt}</if>
             <if test="agent != null  and agent != ''"> and agent = #{agent}</if>
+            <if test="params != null and params.businessFlows != null and params.businessFlows.size() > 0">
+                and exists (
+                    select 1
+                    from tab_outlet_agent oa
+                    where oa.outlet_id = tab_outlet_history.outlet_id
+                    and oa.agent_name in
+                    <foreach item="businessFlow" collection="params.businessFlows" open="(" separator="," close=")">
+                        #{businessFlow}
+                    </foreach>
+                )
+            </if>
         </where>
         ORDER BY updated_at DESC
     </select>

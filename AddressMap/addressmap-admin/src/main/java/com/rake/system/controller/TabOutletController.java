@@ -3,7 +3,6 @@ package com.rake.system.controller;
 import java.util.List;
 import javax.servlet.http.HttpServletResponse;
 
-import com.rake.utils.AgentRoleUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -112,11 +111,8 @@ public class TabOutletController extends BaseController
     @ApiOperation("获取网点代理联盟列表")
     public TableDataInfo listByBusinessFlow(TabOutlet tabOutlet,Authentication authentication)
     {
-        List<String> agentNames = AgentRoleUtil.getAgentRoleNames(authentication);
         startPage();
-        List<TabOutlet> list = agentNames.isEmpty()
-                ? tabOutletService.selectTabOutletList(tabOutlet)
-                : tabOutletService.selectTabOutletByBusinessFlow(agentNames);
+        List<TabOutlet> list = tabOutletService.selectTabOutletList(tabOutlet);
         return getDataTable(list);
     }
 

@@ -65,6 +65,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="jpCompanyName != null  and jpCompanyName != ''"> and jp_company_name like concat('%', #{jpCompanyName}, '%')</if>
             <if test="region != null  and region != ''"> and region = #{region}</if>
             <if test="headquartersAddress != null  and headquartersAddress != ''"> and headquarters_address like concat('%', #{headquartersAddress}, '%')</if>
+            <if test="params != null and params.businessFlows != null and params.businessFlows.size() > 0">
+                and exists (
+                    select 1
+                    from tab_outlet_agent oa
+                    where oa.outlet_id = tab_outlet.id
+                    and oa.agent_name in
+                    <foreach item="businessFlow" collection="params.businessFlows" open="(" separator="," close=")">
+                        #{businessFlow}
+                    </foreach>
+                )
+            </if>
         </where>
     </select>
 

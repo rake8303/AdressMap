@@ -149,25 +149,70 @@
     <el-dialog :title="title" v-model="open" width="1000px" append-to-body>
       <el-form ref="outletRef" :model="form" :rules="rules" label-width="150px">
         <div style="max-height: 550px; overflow-y: auto; padding-right: 10px">
-          <el-form-item label="会社名" prop="jpCompanyName">
-            <el-input v-model="form.jpCompanyName" placeholder="请输入会社名" />
-          </el-form-item>
-          <el-form-item label="会社名简称" prop="shortCompanyName">
-            <el-input
-              v-model="form.shortCompanyName"
-              placeholder="请输入会社名简称"
-            />
-          </el-form-item>
-          <el-form-item label="エリア" prop="region">
-            <el-select v-model="form.region" placeholder="请选择エリア">
-              <el-option
-                v-for="dict in region"
-                :key="dict.value"
-                :label="dict.label"
-                :value="dict.value"
-              ></el-option>
-            </el-select>
-          </el-form-item>
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <el-form-item label="会社名" prop="jpCompanyName">
+                <el-input v-model="form.jpCompanyName" placeholder="请输入会社名" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="会社名简称" prop="shortCompanyName">
+                <el-input v-model="form.shortCompanyName" placeholder="请输入会社名简称" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <el-form-item label="エリア" prop="region">
+                <el-select v-model="form.region" placeholder="请选择エリア" style="width: 100%">
+                  <el-option
+                    v-for="dict in region"
+                    :key="dict.value"
+                    :label="dict.label"
+                    :value="dict.value"
+                  ></el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="责任人" prop="contactPerson">
+                <el-input v-model="form.contactPerson" placeholder="请输入责任人" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <el-form-item label="会社種類" prop="cpnType">
+                <el-select v-model="form.cpnType" placeholder="请选择会社種類" style="width: 100%">
+                  <el-option
+                    v-for="dict in cpn_type"
+                    :key="dict.value"
+                    :label="dict.label"
+                    :value="dict.value"
+                  ></el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12" v-if="canViewBusinessFlowInfo">
+              <el-form-item label="商流" prop="agentList">
+                <el-select
+                  v-model="selectedAgent"
+                  placeholder="请选择商流"
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="agent in OUTLET_AGENTS"
+                    :key="agent.value"
+                    :label="agent.label"
+                    :value="agent.value"
+                  ></el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+
           <el-form-item label="住所" prop="headquartersAddress">
             <el-input
               v-model="form.headquartersAddress"
@@ -175,98 +220,6 @@
               placeholder="请输入内容"
             />
           </el-form-item>
-          <el-form-item label="责任人" prop="contactPerson">
-            <el-input v-model="form.contactPerson" placeholder="请输入责任人" />
-          </el-form-item>
-          <el-form-item label="会社種類" prop="cpnType">
-            <el-select v-model="form.cpnType" placeholder="请选择会社種類">
-              <el-option
-                v-for="dict in cpn_type"
-                :key="dict.value"
-                :label="dict.label"
-                :value="dict.value"
-              ></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="商流" prop="agentList">
-            <el-select
-              v-model="form.agentList"
-              multiple
-              collapse-tags
-              collapse-tags-tooltip
-              placeholder="请选择商流"
-              style="width: 100%"
-            >
-              <el-option
-                v-for="agent in OUTLET_AGENTS"
-                :key="agent.value"
-                :label="agent.label"
-                :value="agent.value"
-              ></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="月次販売台数" prop="totalSalesAvg">
-            <el-input
-              v-model="form.totalSalesAvg"
-              placeholder="请输入月次販売台数"
-            />
-          </el-form-item>
-
-          <el-divider content-position="left">月次販売明細</el-divider>
-          <el-row :gutter="10" class="mb8">
-            <el-col :span="1.5">
-              <el-button type="primary" plain icon="Plus" @click="handleAddMonthlySales">
-                新增
-              </el-button>
-            </el-col>
-            <el-col :span="1.5">
-              <el-button type="danger" plain icon="Delete" @click="handleDeleteMonthlySales">
-                删除
-              </el-button>
-            </el-col>
-          </el-row>
-          <el-table
-            :data="monthlySalesList"
-            :row-class-name="rowMonthlySalesIndex"
-            @selection-change="handleMonthlySalesSelectionChange"
-          >
-            <el-table-column type="selection" width="50" align="center" />
-            <el-table-column label="序号" align="center" prop="index" width="60" />
-            <el-table-column label="年月" min-width="150">
-              <template #default="scope">
-                <el-date-picker
-                  v-model="scope.row.salesMonth"
-                  type="month"
-                  value-format="YYYY-MM"
-                  format="YYYY-MM"
-                  placeholder="年月"
-                  style="width: 100%"
-                />
-              </template>
-            </el-table-column>
-            <el-table-column label="台数" min-width="120">
-              <template #default="scope">
-                <el-input-number
-                  v-model="scope.row.quantity"
-                  :min="0"
-                  :precision="0"
-                  controls-position="right"
-                  style="width: 100%"
-                />
-              </template>
-            </el-table-column>
-            <el-table-column label="商品名称" min-width="180">
-              <template #default="scope">
-                <el-input v-model="scope.row.productName" placeholder="商品名称" />
-              </template>
-            </el-table-column>
-            <el-table-column label="备注" min-width="220">
-              <template #default="scope">
-                <el-input v-model="scope.row.remark" placeholder="备注" />
-              </template>
-            </el-table-column>
-          </el-table>
-
         </div>
       </el-form>
       <template #footer>
@@ -280,6 +233,7 @@
 </template>
 
 <script setup name="Outlet">
+import { computed, ref, reactive, onMounted, getCurrentInstance, toRefs } from "vue";
 import {
   listOutlet,
   listByBusinessFlow,
@@ -291,15 +245,15 @@ import {
 import useUserStore from "@/store/modules/user";
 import {
   OUTLET_AGENTS,
-  applySelectedOutletAgents
+  applySelectedOutletAgents,
+  canViewAllData
 } from "@/utils/outletAgents";
 
 const userStore = useUserStore();
 console.log("用户信息:", userStore.name, userStore.roles);
-const specialPermissions = ["admin", "common", "readonly"].includes(
-  userStore.roles[0]
-);
-console.log("specialPermissions:", specialPermissions);
+const specialPermissions = computed(() => canViewAllData(userStore));
+const canViewBusinessFlowInfo = computed(() => canViewAllData(userStore));
+console.log("specialPermissions:", specialPermissions.value);
 
 // 在组件挂载时确保用户信息已加载
 onMounted(() => {
@@ -332,13 +286,12 @@ const { region, cpn_type, business_flow } = proxy.useDict(
 
 const outletList = ref([]);
 const outletHistoryList = ref([]);
-const monthlySalesList = ref([]);
+const selectedAgent = ref("");
 const open = ref(false);
 const loading = ref(true);
 const showSearch = ref(true);
 const ids = ref([]);
 const checkedOutletHistory = ref([]);
-const checkedMonthlySales = ref([]);
 const single = ref(true);
 const multiple = ref(true);
 const total = ref(0);
@@ -370,6 +323,11 @@ onMounted(() => {
 // 获取地址坐标的函数
 async function getAddressCoordinates(address) {
   return new Promise((resolve, reject) => {
+    const normalizedAddress = (address || "").trim();
+    if (!normalizedAddress) {
+      reject(new Error("请输入有效的地址"));
+      return;
+    }
     if (!geocoder) {
       initGeocoder();
       setTimeout(() => {
@@ -377,10 +335,10 @@ async function getAddressCoordinates(address) {
           reject(new Error('地图服务加载失败，请稍后重试'));
           return;
         }
-        performGeocode(address, resolve, reject);
+        performGeocode(normalizedAddress, resolve, reject);
       }, 1000);
     } else {
-      performGeocode(address, resolve, reject);
+      performGeocode(normalizedAddress, resolve, reject);
     }
   });
 }
@@ -389,13 +347,19 @@ async function getAddressCoordinates(address) {
 function performGeocode(address, resolve, reject) {
   geocoder.geocode({ address: address }, (results, status) => {
     if (status === 'OK' && results[0]) {
+      if (results[0].partial_match) {
+        reject(new Error('地址不够准确，请重新填写完整地址'));
+        return;
+      }
       const location = results[0].geometry.location;
       resolve({
         lat: location.lat(),
         lng: location.lng()
       });
-    } else {
+    } else if (status === 'ZERO_RESULTS') {
       reject(new Error('找不到该地址，请确认'));
+    } else {
+      reject(new Error(`地址解析失败(${status})，请稍后重试`));
     }
   });
 }
@@ -430,7 +394,7 @@ const { queryParams, form, rules } = toRefs(data);
 function getList() {
   loading.value = true;
 
-  if (specialPermissions) {
+  if (specialPermissions.value) {
     // 用户具有特殊权限，调用 listOutlet 获取数据
     listOutlet(queryParams.value).then((response) => {
       outletList.value = response.rows;
@@ -492,8 +456,8 @@ function reset() {
     outletRemark: null,
     salesRecord: null,
   };
+  selectedAgent.value = "";
   outletHistoryList.value = [];
-  monthlySalesList.value = [];
   proxy.resetForm("outletRef");
 }
 
@@ -555,13 +519,13 @@ function submitForm() {
       // 在提交前先获取地址的经纬度
       getAddressCoordinates(form.value.headquartersAddress)
         .then(({ lat, lng }) => {
+          form.value.agentList = selectedAgent.value ? [selectedAgent.value] : [];
           // 将经纬度添加到表单数据中
           const formData = {
             ...stripRemovedOutletFields(applySelectedOutletAgents(form.value)),
             lat: lat,
             lng: lng,
             outletHistoryList: outletHistoryList.value,
-            monthlySalesList: normalizeMonthlySalesList()
           };
           if (form.value.id != null) {
             updateOutlet(formData).then((response) => {
@@ -644,45 +608,6 @@ function handleDeleteOutletHistory() {
 /** 复选框选中数据 */
 function handleOutletHistorySelectionChange(selection) {
   checkedOutletHistory.value = selection.map((item) => item.index);
-}
-
-function rowMonthlySalesIndex({ row, rowIndex }) {
-  row.index = rowIndex + 1;
-}
-
-function handleMonthlySalesSelectionChange(selection) {
-  checkedMonthlySales.value = selection.map((item) => item.index);
-}
-
-function handleAddMonthlySales() {
-  monthlySalesList.value.push({
-    salesMonth: "",
-    quantity: 0,
-    productName: "",
-    remark: "",
-  });
-}
-
-function handleDeleteMonthlySales() {
-  if (checkedMonthlySales.value.length == 0) {
-    proxy.$modal.msgError("请选择要删除的月次販売台数");
-    return;
-  }
-  monthlySalesList.value = monthlySalesList.value.filter(
-    (item) => checkedMonthlySales.value.indexOf(item.index) == -1
-  );
-  checkedMonthlySales.value = [];
-}
-
-function normalizeMonthlySalesList() {
-  return monthlySalesList.value
-    .filter((item) => item.salesMonth || item.quantity || item.productName || item.remark)
-    .map((item) => ({
-      salesMonth: item.salesMonth,
-      quantity: item.quantity,
-      productName: item.productName,
-      remark: item.remark,
-    }));
 }
 
 /** 导出按钮操作 */

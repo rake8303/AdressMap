@@ -26,6 +26,17 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="outletId != null and outletId != ''"> and outlet_id = #{outletId}</if>
             <if test="salesMonth != null and salesMonth != ''"> and sales_month = #{salesMonth}</if>
             <if test="productName != null and productName != ''"> and product_name like concat('%', #{productName}, '%')</if>
+            <if test="params != null and params.businessFlows != null and params.businessFlows.size() > 0">
+                and exists (
+                    select 1
+                    from tab_outlet_agent oa
+                    where oa.outlet_id = tab_outlet_monthly_sales.outlet_id
+                    and oa.agent_name in
+                    <foreach item="businessFlow" collection="params.businessFlows" open="(" separator="," close=")">
+                        #{businessFlow}
+                    </foreach>
+                )
+            </if>
         </where>
         order by sales_month desc, sales_id desc
     </select>

@@ -50,7 +50,11 @@
         NULL AS branch_name,
         '販売店' AS company_type,
         (
-            SELECT GROUP_CONCAT(oa.agent_name ORDER BY <include refid="BusinessFlowOrder"/> SEPARATOR ',')
+            SELECT SUBSTRING_INDEX(
+                GROUP_CONCAT(oa.agent_name ORDER BY <include refid="BusinessFlowOrder"/> SEPARATOR ','),
+                ',',
+                1
+            )
             FROM tab_outlet_agent oa
             WHERE oa.outlet_id = o.id
         ) AS businessflow,

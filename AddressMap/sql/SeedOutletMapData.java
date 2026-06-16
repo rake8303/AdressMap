@@ -12,7 +12,7 @@ public class SeedOutletMapData {
     private static final String URL = "jdbc:mysql://localhost:3306/addressmap?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Tokyo";
     private static final String USER = "root";
     private static final String PASSWORD = "654321";
-    private static final int VISIBLE_OUTLET_COUNT = 80;
+    private static final int VISIBLE_OUTLET_COUNT = 88;
     private static final int UNDECIDED_FLOW_COUNT = 20;
     private static final int MULTI_FLOW_COUNT = 15;
     private static final double LOCATION_STDDEV = 8.5d;
