@@ -655,6 +655,97 @@ function normalizeMonthLabel(value) {
   return text
 }
 
+function getMonthSortKey(value) {
+  const normalized = normalizeMonthLabel(value)
+  const match = normalized.match(/^(\d{4})-(\d{2})$/)
+  if (!match) return -1
+  return Number(`${match[1]}${match[2]}`)
+}
+
+function getLatestMonthlySalesRecord(outletId) {
+  if (outletId === undefined || outletId === null) return null
+
+  const monthTotals = new Map()
+  ;(monthlySalesList.value || [])
+    .filter(row => String(row.outletId ?? '') === String(outletId))
+    .forEach(row => {
+      const month = normalizeMonthLabel(row.salesMonth)
+      const quantity = Number(row.quantity)
+      if (!Number.isFinite(quantity)) return
+      monthTotals.set(month, (monthTotals.get(month) || 0) + quantity)
+    })
+
+  const latestMonthEntry = Array.from(monthTotals.entries())
+    .sort((left, right) => getMonthSortKey(right[0]) - getMonthSortKey(left[0]))[0]
+
+  if (!latestMonthEntry) return null
+
+  return {
+    salesMonth: latestMonthEntry[0],
+    quantity: Math.round(latestMonthEntry[1])
+  }
+}
+
+function formatDateTime(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${month}/${day} ${hours}:${minutes}`
+}
+
+function getLatestHistoryRecord(historyList) {
+  return [...(historyList || [])]
+    .sort((left, right) => new Date(right.updatedAt || right.createdAt || 0) - new Date(left.updatedAt || left.createdAt || 0))[0] || null
+}
+
+function formatVisitTopic(topic) {
+  const topicMap = {
+    activity_confirm: '活动执行情况确认',
+    sample_replenish: '补样与补货情况确认',
+    merch_check: '卖场陈列检查',
+    monthly_review: '月次销售回顾',
+    next_plan: '下阶段销售计划沟通',
+    stock_check: '库存情况确认',
+    quote_followup: '报价后续跟进'
+  }
+  return topicMap[topic] || topic
+}
+
+function formatHistoryRemark(remark) {
+  const text = String(remark || '').trim()
+  if (!text) return '本次访问未填写详细记录。'
+
+  const seededMatch = text.match(/topic=([^|]+)\s*\|\s*visit=(\d+)\/(\d+)/)
+  if (seededMatch) {
+    const [, topic, currentVisit, totalVisit] = seededMatch
+    return `本次主要进行了${formatVisitTopic(topic.trim())}，当前为第 ${currentVisit} 次回访（计划 ${totalVisit} 次）。`
+  }
+
+  return text
+}
+
+function formatLatestHistorySummary(record) {
+  if (!record) {
+    return {
+      meta: '暂无访问记录',
+      description: '当前门店还没有登记访问履历。'
+    }
+  }
+
+  const timeText = formatDateTime(record.updatedAt || record.createdAt) || '时间未登记'
+  const agentText = record.agent ? `${record.agent}` : '所属商流未登记'
+  const userText = record.updatedBy ? `，记录人 ${record.updatedBy}` : ''
+
+  return {
+    meta: `${timeText} · ${agentText}${userText}`,
+    description: formatHistoryRemark(record.remark)
+  }
+}
+
 function disposeSalesChart() {
   if (salesChartResizeHandler) {
     window.removeEventListener('resize', salesChartResizeHandler)
@@ -764,6 +855,9 @@ function showMarkerInfo(marker) {
   const companyName = escapeHtml(data.jpCompanyName)
   const businessflow = escapeHtml((data.businessflow || UNDECIDED_BUSINESS_FLOW).split(',')[0].trim())
   const hasBusinessFlow = Boolean(data.businessflow)
+  const latestMonthlySales = getLatestMonthlySalesRecord(data.id)
+  const latestMonthlySalesValue = escapeHtml(latestMonthlySales?.quantity ?? '未定')
+  const latestMonthlySalesMonth = escapeHtml(latestMonthlySales?.salesMonth ?? '暂无月次记录')
 
   // 会社名和查看详细按钮 - 同一行
   if (data.jpCompanyName) {
@@ -795,67 +889,30 @@ function showMarkerInfo(marker) {
       </div>`
   }
 
-  // 月次販売台数
+  // 关键信息摘要
   if (data.companyType === "販売店" && hasBusinessFlow) {
-    const totalSales = escapeHtml(data.totalSalesAvg ? data.totalSalesAvg : '未定')
-    
     content += `
-      <div style="display: flex; gap: 10px; margin: 10px 0;">
-        <div style="flex: 1; padding: 8px; border: 2px solid #667eea; border-radius: 6px; text-align: center; white-space: nowrap;">
-          <div style="font-size: 12px; color: #333; font-weight: bold; margin-bottom: 4px;">月次販売台数</div>
-          <div style="font-weight: bold; color: #000; font-size: 14px; overflow: hidden; text-overflow: ellipsis;">${totalSales}</div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 12px 0;">
+        <div style="padding: 10px; border: 1px solid #dbe4ff; background: #f7f9ff; border-radius: 8px;">
+          <div style="font-size: 12px; color: #5b6475; margin-bottom: 6px;">商流</div>
+          <div style="font-weight: 700; color: #1f2937; font-size: 15px; line-height: 1.4;">${businessflow}</div>
+        </div>
+        <div style="padding: 10px; border: 1px solid #dbe4ff; background: #f7f9ff; border-radius: 8px;">
+          <div style="font-size: 12px; color: #5b6475; margin-bottom: 6px;">最近月次販売台数</div>
+          <div style="font-weight: 700; color: #1f2937; font-size: 18px; line-height: 1.2;">${latestMonthlySalesValue}</div>
+          <div style="margin-top: 4px; font-size: 12px; color: #6b7280;">${latestMonthlySalesMonth}</div>
         </div>
       </div>`
   }
 
-  // 商流
-  if (data.companyType === "販売店" && hasBusinessFlow) {
-    content += `
-      <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-        <div style="flex: 1; padding: 8px; border: 2px solid #667eea; border-radius: 6px; text-align: center; white-space: nowrap;">
-          <div style="font-size: 12px; color: #333; font-weight: bold; margin-bottom: 4px;">商流</div>
-          <div style="font-weight: bold; color: #000; font-size: 14px; overflow: hidden; text-overflow: ellipsis;">${businessflow}</div>
-        </div>
-      </div>`
-  }
-
-  // 访问履历表格
+  // 最近访问记录
   if (data.companyType === "販売店" && data.id) {
-    // 显示访问记录表格，加宽滚动条
     content += `
-      <div style="margin-top: 10px; border-top: 1px solid #ccc; padding-top: 10px;">
-        <div style="font-weight: bold; color: #000; margin-bottom: 8px; text-align: center;">贩卖店訪問履歴</div>
-        <div style="max-height: 120px; overflow-y: auto; scrollbar-width: auto; scrollbar-color: #667eea #f1f1f1;">
-          <style>
-            ::-webkit-scrollbar {
-              width: 15px;
-            }
-            ::-webkit-scrollbar-track {
-              background: #f1f1f1;
-              border-radius: 6px;
-            }
-            ::-webkit-scrollbar-thumb {
-              background: #667eea;
-              border-radius: 6px;
-            }
-            ::-webkit-scrollbar-thumb:hover {
-              background: #5566d9;
-            }
-          </style>
-          <table style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed;">
-            <thead>
-              <tr style="background-color: #f5f5f5; position: sticky; top: 0;">
-                <th style="border: 1px solid #ddd; padding: 6px; text-align: center; width: 40%; color: #000; font-weight: bold;">备注</th>
-                <th style="border: 1px solid #ddd; padding: 6px; text-align: center; width: 35%; color: #000; font-weight: bold;">人员（商流）</th>
-                <th style="border: 1px solid #ddd; padding: 6px; text-align: center; width: 25%; color: #000; font-weight: bold;">最后修改时间</th>
-              </tr>
-            </thead>
-            <tbody id="history-tbody">
-              <tr>
-                <td style="border: 1px solid #ddd; padding: 6px; text-align: center; color: #000;" colspan="3">加载中...</td>
-              </tr>
-            </tbody>
-          </table>
+      <div style="margin-top: 6px; border-top: 1px solid #e5e7eb; padding-top: 12px;">
+        <div style="font-size: 12px; color: #5b6475; margin-bottom: 6px;">最近访问记录</div>
+        <div id="history-summary-card" style="border: 1px solid #e5e7eb; border-radius: 8px; background: #ffffff; padding: 12px;">
+          <div style="font-size: 13px; color: #374151; font-weight: 600; margin-bottom: 6px;">正在加载最近访问内容...</div>
+          <div style="font-size: 12px; color: #6b7280; line-height: 1.7;">请稍候，系统正在读取该门店最近一条访问履历。</div>
         </div>
       </div>`
   }
@@ -874,7 +931,7 @@ function showMarkerInfo(marker) {
       });
     }
     if (data.companyType === "販売店" && data.id) {
-      updateHistoryTable(data.id)
+      updateHistorySummary(data.id)
     }
   });
 }
@@ -892,38 +949,19 @@ function goToCompanyDetail(data) {
 }
 
 
-// 更新访问记录表格
-async function updateHistoryTable(id) {
+// 更新最近访问记录摘要
+async function updateHistorySummary(id) {
   const historyList = await getDetail(id);
-  const tbody = document.getElementById('history-tbody');
-  if (!tbody) return
+  const summaryCard = document.getElementById('history-summary-card');
+  if (!summaryCard) return
 
-  tbody.replaceChildren()
-  if (historyList && historyList.length > 0) {
-    historyList.slice(0, 5).forEach(record => {
-      const row = document.createElement('tr')
-      ;[record.remark || '无', record.updatedBy || '无', record.updatedAt || '无'].forEach(value => {
-        row.appendChild(createHistoryCell(value))
-      })
-      tbody.appendChild(row)
-    })
-    return
-  }
+  const latestHistory = getLatestHistoryRecord(historyList)
+  const summary = formatLatestHistorySummary(latestHistory)
 
-  const row = document.createElement('tr')
-  const cell = createHistoryCell('暂无访问记录')
-  cell.colSpan = 3
-  row.appendChild(cell)
-  tbody.appendChild(row)
-}
-
-function createHistoryCell(value) {
-  const cell = document.createElement('td')
-  cell.style.border = '1px solid #ddd'
-  cell.style.padding = '6px'
-  cell.style.textAlign = 'center'
-  cell.textContent = value
-  return cell
+  summaryCard.innerHTML = `
+    <div style="font-size: 13px; color: #374151; font-weight: 600; margin-bottom: 6px;">${escapeHtml(summary.meta)}</div>
+    <div style="font-size: 13px; color: #111827; line-height: 1.8; word-break: break-word;">${escapeHtml(summary.description)}</div>
+  `
 }
 
 

@@ -228,7 +228,7 @@
       width="560px"
       append-to-body
     >
-      <el-form :model="monthlySalesForm" label-width="100px">
+      <el-form :model="monthlySalesForm" label-width="100px" class="monthly-sales-form">
         <el-form-item label="年月" prop="salesMonth" required>
           <el-date-picker
             v-model="monthlySalesForm.salesMonth"
@@ -964,6 +964,26 @@ function submitForm() {
 
 .agent-multi-select :deep(.el-tag) {
   max-width: none;
+}
+
+.monthly-sales-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+}
+
+.monthly-sales-form > .el-form-item:nth-child(n + 3) {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .monthly-sales-form {
+    grid-template-columns: 1fr;
+  }
+
+  .monthly-sales-form > .el-form-item:nth-child(n + 3) {
+    grid-column: auto;
+  }
 }
 
 :deep(.el-card__header) {
