@@ -2,9 +2,9 @@
 export default {
   baseUrl: 'http://localhost:8080',
   appInfo: {
-    name: 'sales-outlet-mobile',
+    name: 'tenkatsu-map',
     version: '1.2.0',
-    logo: '/static/logo.png',
+    logo: '/static/tenkatsu-logo.png',
     site_url: 'https://example.jp',
     agreements: [
       {

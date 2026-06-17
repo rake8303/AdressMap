@@ -20,17 +20,9 @@ export const OUTLET_AGENT_COLORS = {
 };
 
 const BUSINESS_FLOW_ORDER = OUTLET_AGENTS.map((item) => item.value);
-const BUSINESS_FLOW_ALIASES = {
-  XSOL: "織田家",
-  DMM: "豊臣家",
-  WWB: "徳川家",
-  高岸: "武田家",
-  韓可: "上杉家",
-};
 
 export function normalizeBusinessFlow(value = "") {
-  const trimmedValue = String(value || "").trim();
-  return BUSINESS_FLOW_ALIASES[trimmedValue] || trimmedValue;
+  return String(value || "").trim();
 }
 
 export function sortBusinessFlows(agentList = []) {

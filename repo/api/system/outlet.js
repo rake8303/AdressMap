@@ -8,6 +8,14 @@ export function listOutlet(params) {
   })
 }
 
+export function listByBusinessFlow(params) {
+  return request({
+    url: '/system/outlet/listByBusinessFlow',
+    method: 'get',
+    params
+  })
+}
+
 export function getOutlet(id) {
   return request({
     url: `/system/outlet/${id}`,

@@ -126,7 +126,7 @@
   },
   "globalStyle": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "販売店営業アプリ",
+    "navigationBarTitleText": "店活マップ",
     "navigationBarBackgroundColor": "#FFFFFF",
     "backgroundColor": "#f3f4f6"
   }

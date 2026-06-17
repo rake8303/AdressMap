@@ -1,57 +1,56 @@
 export default {
   /**
-   * 网页标题
+   * Web app title
    */
   title: import.meta.env.VITE_APP_TITLE,
 
   /**
-   * 侧边栏主题 深色主题theme-dark，浅色主题theme-light
+   * Sidebar theme
    */
   sideTheme: 'theme-dark',
 
   /**
-   * 是否系统布局配置
+   * Whether to show settings drawer
    */
   showSettings: true,
 
   /**
-   * 是否显示顶部导航
+   * Whether to show top navigation
    */
   topNav: false,
 
   /**
-   * 是否显示 tagsView
+   * Whether to show tags view
    */
   tagsView: true,
-  
+
   /**
-   * 显示页签图标
+   * Whether to show tag icons
    */
   tagsIcon: false,
 
   /**
-   * 是否固定头部
+   * Whether header is fixed
    */
   fixedHeader: false,
 
   /**
-   * 是否显示logo
+   * Whether to show sidebar logo
    */
   sidebarLogo: true,
 
   /**
-   * 是否显示动态标题
+   * Whether to use dynamic title
    */
   dynamicTitle: false,
 
   /**
-   * 是否显示底部版权
+   * Whether to show footer
    */
   footerVisible: false,
 
   /**
-   * 底部版权文本内容
+   * Footer text
    */
-  footerContent: 'Copyright © 2018-2025 RuoYi. All Rights Reserved.'
+  footerContent: 'Copyright © 2026 店活マップ. All Rights Reserved.'
 }
-

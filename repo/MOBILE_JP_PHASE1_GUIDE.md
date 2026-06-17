@@ -4,7 +4,7 @@
 
 ### 入口与全局配置
 - [index.html](/G:/AdressMap/repo/index.html)
-  - 应用网页标题改成 `販売店営業アプリ`
+  - 应用网页标题改成 `店活マップ`
 - [manifest.json](/G:/AdressMap/repo/manifest.json)
   - 应用名称、H5 标题改成日文项目名称
 - [pages.json](/G:/AdressMap/repo/pages.json)

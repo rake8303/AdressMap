@@ -1,8 +1,8 @@
 <template>
   <view class="about-container">
     <view class="header-section text-center">
-      <image style="width: 150rpx; height: 150rpx;" src="/static/logo200.png" mode="widthFix"></image>
-      <uni-title type="h2" title="販売店営業アプリ"></uni-title>
+      <image style="width: 150rpx; height: 150rpx;" src="/static/tenkatsu-logo200.png" mode="widthFix"></image>
+      <uni-title type="h2" title="店活マップ"></uni-title>
     </view>
 
     <view class="content-section">
@@ -37,7 +37,7 @@
     </view>
 
     <view class="copyright">
-      <view>Copyright © 2026 Sales Team App</view>
+      <view>Copyright © 2026 店活マップ</view>
     </view>
   </view>
 </template>

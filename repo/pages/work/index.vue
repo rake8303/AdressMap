@@ -8,13 +8,13 @@
     <view class="search-panel">
       <input v-model="query.keyword" class="search-input" placeholder="店舗名・住所で検索" confirm-type="search" @confirm="reloadList" />
       <scroll-view class="chip-row" scroll-x>
-        <view class="chip" :class="{ 'chip--active': selectedRegion === '' }" @click="selectRegion('')">全エリア</view>
+        <view class="chip" :class="{ 'chip--active': selectedRegions.length === 0 }" @click="selectAllRegions">全エリア</view>
         <view
           v-for="region in regionOptions"
           :key="region"
           class="chip"
-          :class="{ 'chip--active': selectedRegion === region }"
-          @click="selectRegion(region)"
+          :class="{ 'chip--active': selectedRegions.includes(region) }"
+          @click="toggleRegion(region)"
         >{{ region }}</view>
       </scroll-view>
     </view>
@@ -75,9 +75,10 @@ const pageNum = ref(1)
 const pageSize = 20
 const total = ref(0)
 const query = ref({ keyword: '' })
-const selectedRegion = ref('')
+const selectedRegions = ref([])
 const regionOptions = ref([])
 const outletList = ref([])
+const filteredOutlets = ref([])
 
 const currentFlowLabel = computed(() => {
   const flow = getCurrentBusinessFlowRole(userStore)
@@ -113,6 +114,21 @@ function mergeOutletData(outlets, histories, salesRows) {
   })
 }
 
+async function enrichOutlets(rows = []) {
+  let histories = []
+  let salesRows = []
+  if (rows.length > 0) {
+    const outletIds = rows.map(item => String(item.id || ''))
+    const [historyRes, salesRes] = await Promise.all([
+      listHistory({ pageNum: 1, pageSize: 500 }).catch(() => ({ rows: [] })),
+      listMonthlySales({ pageNum: 1, pageSize: 800 }).catch(() => ({ rows: [] }))
+    ])
+    histories = (historyRes.rows || []).filter(item => outletIds.includes(String(item.outletId || '')))
+    salesRows = (salesRes.rows || []).filter(item => outletIds.includes(String(item.outletId || '')))
+  }
+  return mergeOutletData(rows, histories, salesRows)
+}
+
 async function fetchList(reset = false) {
   if (loading.value) return
   loading.value = true
@@ -122,36 +138,22 @@ async function fetchList(reset = false) {
   }
 
   try {
-    const params = {
-      pageNum: pageNum.value,
-      pageSize,
-      jpCompanyName: query.value.keyword || undefined,
-      region: selectedRegion.value || undefined
-    }
-    const outletRes = await listOutlet(params)
-    const rows = outletRes.rows || []
-    total.value = Number(outletRes.total || 0)
-
-    let histories = []
-    let salesRows = []
-    if (rows.length > 0) {
-      const outletIds = rows.map(item => String(item.id || ''))
-      const [historyRes, salesRes] = await Promise.all([
-        listHistory({ pageNum: 1, pageSize: 500 }).catch(() => ({ rows: [] })),
-        listMonthlySales({ pageNum: 1, pageSize: 800 }).catch(() => ({ rows: [] }))
-      ])
-      histories = (historyRes.rows || []).filter(item => outletIds.includes(String(item.outletId || '')))
-      salesRows = (salesRes.rows || []).filter(item => outletIds.includes(String(item.outletId || '')))
+    if (reset) {
+      const allVisibleOutlets = await fetchAllVisibleOutlets()
+      regionOptions.value = [...new Set(allVisibleOutlets.map(item => item.region).filter(Boolean))]
+      filteredOutlets.value = filterOutletsByRegions(allVisibleOutlets)
+      total.value = filteredOutlets.value.length
+      outletList.value = []
+      pageNum.value = 1
     }
 
-    const merged = mergeOutletData(rows, histories, salesRows)
-    const regionSource = reset ? rows : outletList.value.concat(rows)
-    regionOptions.value = [...new Set(regionSource.map(item => item.region).filter(Boolean))]
+    const start = (pageNum.value - 1) * pageSize
+    const end = start + pageSize
+    const pageRows = filteredOutlets.value.slice(start, end)
+    const merged = await enrichOutlets(pageRows)
     outletList.value = reset ? merged : outletList.value.concat(merged)
-    hasMore.value = outletList.value.length < total.value && rows.length === pageSize
-    if (hasMore.value) {
-      pageNum.value += 1
-    }
+    hasMore.value = end < filteredOutlets.value.length
+    if (hasMore.value) pageNum.value += 1
   } finally {
     loading.value = false
     refreshing.value = false
@@ -168,8 +170,50 @@ function loadMore() {
   fetchList(false)
 }
 
-function selectRegion(region) {
-  selectedRegion.value = region
+function filterOutletsByRegions(rows = []) {
+  if (selectedRegions.value.length === 0) {
+    return rows
+  }
+  return rows.filter(item => selectedRegions.value.includes(item.region))
+}
+
+async function fetchAllVisibleOutlets() {
+  const collected = []
+  const requestPageSize = 200
+  let requestPageNum = 1
+  let requestTotal = 0
+
+  do {
+    const response = await fetchOutletPage({
+      pageNum: requestPageNum,
+      pageSize: requestPageSize,
+      jpCompanyName: query.value.keyword || undefined
+    })
+    const rows = response.rows || []
+    requestTotal = Number(response.total || 0)
+    collected.push(...rows)
+    if (rows.length < requestPageSize) break
+    requestPageNum += 1
+  } while (collected.length < requestTotal)
+
+  return collected
+}
+
+function fetchOutletPage(params) {
+  return listOutlet(params)
+}
+
+function selectAllRegions() {
+  selectedRegions.value = []
+  reloadList()
+}
+
+function toggleRegion(region) {
+  if (selectedRegions.value.includes(region)) {
+    selectedRegions.value = selectedRegions.value.filter(item => item !== region)
+  } else {
+    selectedRegions.value = [...selectedRegions.value, region]
+  }
   reloadList()
 }
 

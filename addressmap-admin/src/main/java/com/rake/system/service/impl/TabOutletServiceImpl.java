@@ -5,12 +5,14 @@ import java.util.Collections;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
+import com.rake.common.utils.SecurityUtils;
 import com.rake.common.utils.StringUtils;
 import org.springframework.transaction.annotation.Transactional;
 import com.rake.system.domain.OutletHistory;
 import com.rake.system.mapper.TabOutletMapper;
 import com.rake.system.domain.TabOutlet;
 import com.rake.system.service.ITabOutletService;
+import com.rake.utils.AgentRoleUtil;
 
 /**
  * 販売店管理Service业务层处理
@@ -54,6 +56,7 @@ public class TabOutletServiceImpl implements ITabOutletService
     @Override
     public List<TabOutlet> selectTabOutletList(TabOutlet tabOutlet)
     {
+        applyBusinessFlowScope(tabOutlet);
         return tabOutletMapper.selectTabOutletList(tabOutlet);
     }
 
@@ -151,6 +154,21 @@ public class TabOutletServiceImpl implements ITabOutletService
             return Collections.emptyList();
         }
         return tabOutletMapper.selectTabOutletByBusinessFlow(agentNames);
+    }
+
+    private void applyBusinessFlowScope(TabOutlet tabOutlet)
+    {
+        if (tabOutlet == null || AgentRoleUtil.canViewAllData(SecurityUtils.getAuthentication()))
+        {
+            return;
+        }
+        List<String> agentNames = AgentRoleUtil.getAgentRoleNames(SecurityUtils.getAuthentication());
+        if (StringUtils.isEmpty(agentNames))
+        {
+            tabOutlet.getParams().put("businessFlows", Collections.singletonList("__NO_MATCH__"));
+            return;
+        }
+        tabOutlet.getParams().put("businessFlows", agentNames);
     }
 
     private void syncOutletAgents(TabOutlet tabOutlet)

@@ -14,8 +14,17 @@ export const OUTLET_AGENT_ORDER = [
 
 export const ALL_DATA_ROLE_KEYS = ['admin', 'common', 'readonly']
 
+const BUSINESS_FLOW_ALIASES = {
+  XSOL: FLOW_ODA,
+  DMM: FLOW_TOYOTOMI,
+  WWB: FLOW_TOKUGAWA,
+  高島: FLOW_TAKEDA,
+  韓華: FLOW_UESUGI
+}
+
 export function normalizeBusinessFlow(value = '') {
-  return String(value || '').trim()
+  const normalized = String(value || '').trim()
+  return BUSINESS_FLOW_ALIASES[normalized] || normalized
 }
 
 export function sortBusinessFlows(agentList = []) {

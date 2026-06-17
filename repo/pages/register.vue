@@ -3,7 +3,7 @@
     <view class="logo-content align-center justify-center flex">
       <image style="width: 100rpx; height: 100rpx;" :src="globalConfig.appInfo.logo" mode="widthFix"></image>
       <view class="brand-block">
-        <text class="title">販売店営業アプリ</text>
+        <text class="title">店活マップ</text>
         <text class="subtitle">新規登録</text>
       </view>
     </view>

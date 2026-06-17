@@ -1,6 +1,9 @@
 <template>
   <div class="login">
     <el-form ref="loginRef" :model="loginForm" :rules="loginRules" class="login-form">
+      <div class="brand-mark">
+        <img :src="logo" alt="店活マップ logo" class="brand-logo">
+      </div>
       <h3 class="title">{{ title }}</h3>
       <el-form-item prop="username">
         <el-input
@@ -8,7 +11,7 @@
           type="text"
           size="large"
           auto-complete="off"
-          :placeholder="$t('login.account')"
+          placeholder="アカウント"
         >
           <template #prefix><svg-icon icon-class="user" class="el-input__icon input-icon" /></template>
         </el-input>
@@ -19,7 +22,7 @@
           type="password"
           size="large"
           auto-complete="off"
-          :placeholder="$t('login.password')"
+          placeholder="パスワード"
           @keyup.enter="handleLogin"
         >
           <template #prefix><svg-icon icon-class="password" class="el-input__icon input-icon" /></template>
@@ -30,37 +33,36 @@
           v-model="loginForm.code"
           size="large"
           auto-complete="off"
-          :placeholder="$t('login.captcha')"
+          placeholder="認証コード"
           style="width: 63%"
           @keyup.enter="handleLogin"
         >
           <template #prefix><svg-icon icon-class="validCode" class="el-input__icon input-icon" /></template>
         </el-input>
         <div class="login-code">
-          <img :src="codeUrl" @click="getCode" class="login-code-img"/>
+          <img :src="codeUrl" @click="getCode" class="login-code-img" />
         </div>
       </el-form-item>
-      <el-checkbox v-model="loginForm.rememberMe" style="margin:0px 0px 25px 0px;">{{ $t('login.remember') }}</el-checkbox>
-      <el-form-item style="width:100%;">
+      <el-checkbox v-model="loginForm.rememberMe" style="margin: 0 0 25px 0;">パスワードを保存</el-checkbox>
+      <el-form-item style="width: 100%;">
         <el-button
           :loading="loading"
           size="large"
           type="primary"
-          style="width:100%;"
+          style="width: 100%;"
           @click.prevent="handleLogin"
         >
-          <span v-if="!loading">{{ $t('login.login') }}</span>
-          <span v-else>{{ $t('login.loggingIn') }}</span>
+          <span v-if="!loading">ログイン</span>
+          <span v-else>ログイン中...</span>
         </el-button>
         <div style="float: right;" v-if="register">
-          <router-link class="link-type" :to="'/register'">{{ $t('login.registerNow') }}</router-link>
+          <router-link class="link-type" :to="'/register'">今すぐ登録</router-link>
         </div>
       </el-form-item>
     </el-form>
     <lang-select class="login-lang" />
-    <!--  底部  -->
     <div class="el-login-footer">
-      <span>{{ $t('login.copyright') }}</span>
+      <span>Copyright © 2026 店活マップ All Rights Reserved.</span>
     </div>
   </div>
 </template>
@@ -71,9 +73,9 @@ import Cookies from "js-cookie"
 import { encrypt, decrypt } from "@/utils/jsencrypt"
 import useUserStore from '@/store/modules/user'
 import LangSelect from '@/components/LangSelect'
-import { t } from '@/i18n'
+import logo from '@/assets/logo/logo.png'
 
-const title = computed(() => t('common.systemTitle'))
+const title = computed(() => import.meta.env.VITE_APP_TITLE || '店活マップ')
 const userStore = useUserStore()
 const route = useRoute()
 const router = useRouter()
@@ -88,52 +90,35 @@ const loginForm = ref({
 })
 
 const loginRules = {
-  username: [{ required: true, trigger: "blur", message: t('login.accountRequired') }],
-  password: [{ required: true, trigger: "blur", message: t('login.passwordRequired') }],
-  code: [{ required: true, trigger: "change", message: t('login.captchaRequired') }]
+  username: [{ required: true, trigger: "blur", message: "アカウントを入力してください" }],
+  password: [{ required: true, trigger: "blur", message: "パスワードを入力してください" }],
+  code: [{ required: true, trigger: "change", message: "認証コードを入力してください" }]
 }
 
 const codeUrl = ref("")
 const loading = ref(false)
-// 验证码开关
 const captchaEnabled = ref(true)
-// 注册开关
 const register = ref(false)
 const redirect = ref(undefined)
 
 watch(route, (newRoute) => {
-    redirect.value = newRoute.query && newRoute.query.redirect
+  redirect.value = newRoute.query && newRoute.query.redirect
 }, { immediate: true })
 
 function handleLogin() {
   proxy.$refs.loginRef.validate(valid => {
     if (valid) {
       loading.value = true
-      // 勾选了需要记住密码设置在 cookie 中设置记住用户名和密码
       if (loginForm.value.rememberMe) {
         Cookies.set("username", loginForm.value.username, { expires: 30 })
         Cookies.set("password", encrypt(loginForm.value.password), { expires: 30 })
         Cookies.set("rememberMe", loginForm.value.rememberMe, { expires: 30 })
       } else {
-        // 否则移除
         Cookies.remove("username")
         Cookies.remove("password")
         Cookies.remove("rememberMe")
       }
-      // 调用action的登录方法
       userStore.login(loginForm.value).then(() => {
-        // 在登录成功后，将用户角色存储到 Pinia 中
-        if (userStore.roles && userStore.roles.length > 0) {
-          // 角色已经存储在 userStore 中，无需额外操作
-        } else if (userStore.userInfo && userStore.userInfo.roles) {
-          // 如果角色信息在 userInfo 中，确保将其同步到 roles 状态
-          userStore.setRoles(userStore.userInfo.roles)
-        }
-
-
-
-
-
         const query = route.query
         const otherQueryParams = Object.keys(query).reduce((acc, cur) => {
           if (cur !== "redirect") {
@@ -144,7 +129,6 @@ function handleLogin() {
         router.push({ path: redirect.value || "/", query: otherQueryParams })
       }).catch(() => {
         loading.value = false
-        // 重新获取验证码
         if (captchaEnabled.value) {
           getCode()
         }
@@ -178,7 +162,7 @@ getCode()
 getCookie()
 </script>
 
-<style lang='scss' scoped>
+<style lang="scss" scoped>
 .login {
   display: flex;
   justify-content: center;
@@ -187,10 +171,25 @@ getCookie()
   background-image: url("../assets/images/login-background.jpg");
   background-size: cover;
 }
+
+.brand-mark {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.brand-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  box-shadow: 0 12px 28px rgba(23, 54, 93, 0.22);
+}
+
 .title {
-  margin: 0px auto 30px auto;
+  margin: 0 auto 30px auto;
   text-align: center;
-  color: #707070;
+  color: #17365d;
+  font-weight: 700;
 }
 
 .login-form {
@@ -199,32 +198,33 @@ getCookie()
   width: 400px;
   padding: 25px 25px 5px 25px;
   z-index: 1;
+
   .el-input {
     height: 40px;
+
     input {
       height: 40px;
     }
   }
+
   .input-icon {
     height: 39px;
     width: 14px;
-    margin-left: 0px;
+    margin-left: 0;
   }
 }
-.login-tip {
-  font-size: 13px;
-  text-align: center;
-  color: #bfbfbf;
-}
+
 .login-code {
   width: 33%;
   height: 40px;
   float: right;
+
   img {
     cursor: pointer;
     vertical-align: middle;
   }
 }
+
 .el-login-footer {
   height: 40px;
   line-height: 40px;
@@ -233,10 +233,11 @@ getCookie()
   width: 100%;
   text-align: center;
   color: #fff;
-  font-family: Arial;
+  font-family: Arial, sans-serif;
   font-size: 12px;
   letter-spacing: 1px;
 }
+
 .login-code-img {
   height: 40px;
   padding-left: 12px;

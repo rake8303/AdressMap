@@ -1,5 +1,5 @@
 {
-    "name" : "販売店営業アプリ",
+    "name" : "店活マップ",
     "appid" : "__UNI__25A9D80",
     "description" : "",
     "versionName" : "1.2.0",
@@ -62,7 +62,7 @@
             "port" : 9090,
             "https" : false
         },
-        "title" : "販売店営業アプリ",
+        "title" : "店活マップ",
         "router" : {
             "mode" : "hash",
             "base" : "./"

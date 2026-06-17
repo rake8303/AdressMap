@@ -2,7 +2,7 @@
   <scroll-view class="page dashboard-page" scroll-y>
     <view class="hero">
       <view>
-        <view class="hero__eyebrow">販売店営業アプリ</view>
+        <view class="hero__eyebrow">店活マップ</view>
         <view class="hero__title">重要な販売店と直近のフォロー状況をすぐ確認できます。</view>
         <view class="hero__meta">{{ currentFlowLabel }}</view>
       </view>
@@ -103,15 +103,15 @@ const currentFlowLabel = computed(() => {
 async function loadDashboard() {
   loading.value = true
   try {
-    const [outletRes, historyRes, salesRes] = await Promise.all([
-      listOutlet({ pageNum: 1, pageSize: 100 }),
-      listHistory({ pageNum: 1, pageSize: 200 }),
-      listMonthlySales({ pageNum: 1, pageSize: 500 })
+    const outlets = await fetchAllVisibleOutlets()
+    const outletIds = outlets.map(item => String(item.id || '')).filter(Boolean)
+    const [historyRes, salesRes] = await Promise.all([
+      listHistory({ pageNum: 1, pageSize: 1000 }).catch(() => ({ rows: [] })),
+      listMonthlySales({ pageNum: 1, pageSize: 2000 }).catch(() => ({ rows: [] }))
     ])
 
-    const outlets = outletRes.rows || []
-    const histories = historyRes.rows || []
-    const salesRows = salesRes.rows || []
+    const histories = (historyRes.rows || []).filter(item => outletIds.includes(String(item.outletId || '')))
+    const salesRows = (salesRes.rows || []).filter(item => outletIds.includes(String(item.outletId || '')))
 
     const historyMap = new Map()
     histories.forEach(item => {
@@ -148,7 +148,7 @@ async function loadDashboard() {
       .slice(0, 8)
 
     dashboard.value = {
-      totalOutlets: merged.length,
+      totalOutlets: outlets.length,
       activeSalesOutlets: latestSalesRows.length,
       recentVisitedOutlets: recentVisitedRows.length,
       totalLatestSales: formatNumber(latestSalesRows.reduce((sum, item) => sum + item.latestSalesValue, 0))
@@ -156,6 +156,28 @@ async function loadDashboard() {
   } finally {
     loading.value = false
   }
+}
+
+async function fetchAllVisibleOutlets() {
+  const pageSize = 200
+  const collected = []
+  let pageNum = 1
+  let total = 0
+
+  do {
+    const response = await fetchOutletPage({ pageNum, pageSize })
+    const rows = response.rows || []
+    total = Number(response.total || 0)
+    collected.push(...rows)
+    if (rows.length < pageSize) break
+    pageNum += 1
+  } while (collected.length < total)
+
+  return collected
+}
+
+function fetchOutletPage(params) {
+  return listOutlet(params)
 }
 
 function goOutletList() {
