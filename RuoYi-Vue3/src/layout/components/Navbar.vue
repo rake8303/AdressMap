@@ -150,25 +150,32 @@ function toggleTheme() {
     height: 100%;
     line-height: 50px;
     display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 16px;
 
     &:focus {
       outline: none;
     }
 
     .right-menu-item {
-      display: inline-block;
-      padding: 0 8px;
-      height: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+      height: 36px;
+      border-radius: 18px;
       font-size: 18px;
       color: #5a5e66;
-      vertical-align: text-bottom;
+      vertical-align: middle;
 
       &.hover-effect {
         cursor: pointer;
-        transition: background 0.3s;
+        transition: background 0.3s, color 0.3s;
 
         &:hover {
-          background: rgba(0, 0, 0, 0.025);
+          background: rgba(64, 158, 255, 0.1);
+          color: #409eff;
         }
       }
 
@@ -187,12 +194,13 @@ function toggleTheme() {
     }
 
     .avatar-container {
-      margin-right: 0px;
-      padding-right: 0px;
+      margin-right: 0;
+      padding-right: 0;
 
       .avatar-wrapper {
-        margin-top: 10px;
-        right: 5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         position: relative;
 
         .user-avatar {
@@ -203,20 +211,14 @@ function toggleTheme() {
         }
 
         .user-nickname{
-          // position: relative;
-          // left: 5px;
-          // bottom: 10px;
           font-size: 14px;
           font-weight: bold;
-          text-align: center;
-          padding-top: 15px
+          line-height: 1;
+          white-space: nowrap;
         }
 
         i {
           cursor: pointer;
-          position: absolute;
-          right: -20px;
-          top: 25px;
           font-size: 12px;
         }
       }

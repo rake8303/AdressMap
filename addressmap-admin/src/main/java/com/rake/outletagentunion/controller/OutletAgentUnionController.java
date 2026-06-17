@@ -79,21 +79,21 @@ public class OutletAgentUnionController {
         if (outlet.getContactPerson() != null && outlet.getContactPerson().trim().isEmpty()) {
             outlet.setContactPerson(null);
         }
-        if (outlet.getXsolSales() != null && outlet.getXsolSales().trim().isEmpty()) {
-            outlet.setXsolSales(null);
-        }
-        if (outlet.getDmmSales() != null && outlet.getDmmSales().trim().isEmpty()) {
-            outlet.setDmmSales(null);
-        }
-        if (outlet.getWwbSales() != null && outlet.getWwbSales().trim().isEmpty()) {
-            outlet.setWwbSales(null);
-        }
-        if (outlet.getTakashimaSales() != null && outlet.getTakashimaSales().trim().isEmpty()) {
-            outlet.setTakashimaSales(null);
-        }
-        if (outlet.getHanhwaSales() != null && outlet.getHanhwaSales().trim().isEmpty()) {
-            outlet.setHanhwaSales(null);
-        }
+//        if (outlet.getXsolSales() != null && outlet.getXsolSales().trim().isEmpty()) {
+//            outlet.setXsolSales(null);
+//        }
+//        if (outlet.getDmmSales() != null && outlet.getDmmSales().trim().isEmpty()) {
+//            outlet.setDmmSales(null);
+//        }
+//        if (outlet.getWwbSales() != null && outlet.getWwbSales().trim().isEmpty()) {
+//            outlet.setWwbSales(null);
+//        }
+//        if (outlet.getTakashimaSales() != null && outlet.getTakashimaSales().trim().isEmpty()) {
+//            outlet.setTakashimaSales(null);
+//        }
+//        if (outlet.getHanhwaSales() != null && outlet.getHanhwaSales().trim().isEmpty()) {
+//            outlet.setHanhwaSales(null);
+//        }
 //        if (outlet.getTotalSalesAvg() != null && outlet.getTotalSalesAvg().trim().isEmpty()) {
 //            outlet.setTotalSalesAvg(null);
 //        }
